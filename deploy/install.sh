@@ -4,11 +4,13 @@
 #   sudo sh install.sh                    # from PyPI (nazar-sec)
 #   sudo sh install.sh --from /path/src   # from a source checkout or a wheel
 #   sudo sh install.sh --from 'git+https://github.com/krugis/nazar-sec-nazar'
+#   sudo sh install.sh --python /opt/python/bin/python3.12   # a specific interpreter
 #
 # It never starts Nazar in active mode: review the config and try a dry run first.
 set -eu
 
 SOURCE="nazar-sec"
+PYTHON=""
 PREFIX="/opt/nazar"
 BIN="/usr/local/bin/nazar"
 UNIT="/etc/systemd/system/nazar.service"
@@ -18,7 +20,8 @@ while [ $# -gt 0 ]; do
     case "$1" in
         --from) SOURCE="$2"; shift 2 ;;
         --prefix) PREFIX="$2"; shift 2 ;;
-        -h|--help) sed -n '2,9p' "$0"; exit 0 ;;
+        --python) PYTHON="$2"; shift 2 ;;
+        -h|--help) sed -n '2,11p' "$0"; exit 0 ;;
         *) echo "unknown option: $1" >&2; exit 2 ;;
     esac
 done
@@ -31,14 +34,21 @@ die() { printf 'error: %s\n' "$*" >&2; exit 1; }
 [ "$(uname -s)" = "Linux" ] || die "Nazar supports Linux only"
 
 # 1. Prerequisites
-PYTHON=""
-for candidate in python3.13 python3.12 python3.11 python3; do
-    if command -v "$candidate" >/dev/null 2>&1 &&
-        "$candidate" -c 'import sys; sys.exit(sys.version_info < (3, 11))' 2>/dev/null; then
-        PYTHON=$(command -v "$candidate"); break
-    fi
-done
-[ -n "$PYTHON" ] || die "Python 3.11+ is required (e.g. apt install python3.12 python3.12-venv)"
+version_ok() { "$1" -c 'import sys; sys.exit(sys.version_info < (3, 11))' 2>/dev/null; }
+if [ -n "$PYTHON" ]; then
+    [ -x "$PYTHON" ] && version_ok "$PYTHON" || die "--python $PYTHON is not Python 3.11+"
+else
+    for candidate in python3.13 python3.12 python3.11 python3; do
+        if command -v "$candidate" >/dev/null 2>&1 && version_ok "$candidate"; then
+            PYTHON=$(command -v "$candidate"); break
+        fi
+    done
+    [ -n "$PYTHON" ] || die "Python 3.11+ is required (e.g. apt install python3.12 python3.12-venv)"
+fi
+# The service runs as the nazar user, so the interpreter must not live in a private home.
+case "$(readlink -f "$PYTHON")" in
+    /root/*|/home/*) die "$PYTHON is under a home directory the nazar user cannot read; use --python with a system-wide interpreter" ;;
+esac
 "$PYTHON" -c 'import venv, ensurepip' 2>/dev/null ||
     die "the Python venv module is missing (e.g. apt install python3-venv)"
 command -v cscli >/dev/null 2>&1 || die "cscli not found: install CrowdSec first (https://docs.crowdsec.net)"

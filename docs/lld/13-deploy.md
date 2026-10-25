@@ -79,7 +79,9 @@ it requires relaxing the unit (documented, not default).
 ## `deploy/install.sh`
 
 POSIX `sh`, idempotent, `set -eu`, run as root:
-1. Check OS, Python ≥ 3.11, `cscli` present, Ollama reachable (warn only).
+1. Check OS, Python ≥ 3.11 (first of `python3.13`…`python3` on `PATH`, or `--python PATH`),
+   `cscli` present, Ollama reachable (warn only). An interpreter under `/root` or `/home` is refused:
+   the venv links to it and the `nazar` user could not read it.
 2. Create system user `nazar` (`useradd --system --home /var/lib/nazar --shell /usr/sbin/nologin`).
 3. Install into a dedicated venv `/opt/nazar/venv` (`--from` a PyPI name, path, wheel or git URL;
    default `nazar-sec`) and link `/usr/local/bin/nazar`. A plain venv instead of pipx: one less

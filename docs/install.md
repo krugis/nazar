@@ -51,7 +51,16 @@ The script is idempotent. It:
 5. installs and enables `nazar.service`, but does **not** start it.
 
 `--from` also accepts a wheel, a PyPI name or a git URL. Without `--from` it installs `nazar-sec`
-from PyPI.
+from PyPI. If the system Python is older than 3.11 (e.g. Debian 11), install a newer one system-wide
+and pass it with `--python`, for example:
+
+```bash
+sudo UV_PYTHON_INSTALL_DIR=/opt/python uv python install 3.12
+```
+
+```bash
+sudo sh deploy/install.sh --from . --python /opt/python/cpython-3.12.13-linux-x86_64-gnu/bin/python3.12
+```
 
 ## 4. Configure
 
