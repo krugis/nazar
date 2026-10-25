@@ -33,9 +33,9 @@ Design: [DESIGN.md](DESIGN.md) (what/why) · [docs/lld/](docs/lld/README.md) (ho
 | F-13 | Prompt `prompts/triage.md` (triage-v1) + prompt builder + escaping | [07](docs/lld/07-analyst.md) | done | |
 | F-14 | Verdict parser (`<think>` stripping, fences, JSON scan) | [07](docs/lld/07-analyst.md) | done | |
 | F-15 | Ollama backend + Analyst (retry once, fallback `unknown`) | [07](docs/lld/07-analyst.md) | done | |
-| F-16 | App composition + Pipeline + Daemon (collect, triage, housekeeping) | [11](docs/lld/11-daemon.md) | todo | policy stub = report_only until P-1 |
-| F-17 | CLI skeleton + `run [--dry-run] [--once]`, `config check`, `status` | [12](docs/lld/12-cli.md) | todo | |
-| F-18 | `test-model` + ~20 labelled eval incidents | [07](docs/lld/07-analyst.md#evaluation-nazar-test-model) | todo | |
+| F-16 | App composition + Pipeline + Daemon (collect, triage, housekeeping) | [11](docs/lld/11-daemon.md) | done | policy is an M1 placeholder (report only) until P-1 |
+| F-17 | CLI skeleton + `run [--dry-run] [--once]`, `config check`, `status` | [12](docs/lld/12-cli.md) | done | |
+| F-18 | `test-model` + ~20 labelled eval incidents | [07](docs/lld/07-analyst.md#evaluation-nazar-test-model) | done | 22 cases |
 | F-19 | M1 acceptance on a live CrowdSec + Ollama (dry-run, valid verdicts, no CrowdSec changes) | DESIGN §9 | blocked | dev host has <1 GB free disk; needs a test VM. Also verify LAPI `include_capi`, default `limit`, sort order |
 
 ## M2: Policy and enforcement (v0.2)

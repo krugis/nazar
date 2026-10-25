@@ -11,6 +11,7 @@ Asks the local model for a `Verdict` (DESIGN §3.4). Its output only feeds the p
 | `prompt.py` | `PromptTemplate` (loads `triage.md`), `build_messages`, `repair_messages` |
 | `parser.py` | `parse_verdict(text) -> Verdict` (raises `ParseError`) |
 | `analyst.py` | `Analyst.triage(incident) -> TriageResult` |
+| `evaluate.py` | eval set loading and metrics for `nazar test-model` |
 
 ## Backend
 
@@ -112,8 +113,10 @@ raises a health alert through the daemon's health check (11).
 
 ## Evaluation (`nazar test-model`)
 
-`nazar/data/eval_incidents.jsonl`: labelled incidents (`{"incident": {...}, "expected":
-{"verdict": "...", "min_severity": "...", "action": "..."}}`). Start with ~20 in M1, grow to ~50.
+`nazar/data/eval_incidents.jsonl`: labelled incidents, one per line:
+`{"id": "...", "incident": {...}, "expected": {"verdict": "malicious" | [...], "action": "ban" | [...]}}`.
+A list means any of those answers is acceptable. 22 cases in M1 (incl. prompt-injection cases), grow
+to ~50.
 Report: verdict accuracy, action agreement, invalid-output rate, retry rate, p50/p95 latency.
 `--json` for comparing models and prompt versions.
 

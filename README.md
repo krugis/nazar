@@ -94,6 +94,23 @@ sudo nazar run --dry-run
 - [ ] v1.0: stable v1
 - [ ] v2: Nazar Radar (news-driven response)
 
+## Development
+
+The low-level design is in [docs/lld/](docs/lld/README.md) and progress is tracked in
+[TRACKER.md](TRACKER.md).
+
+```bash
+uv venv -p 3.12 && uv pip install -e ".[dev]"
+ruff check . && ruff format --check . && mypy && pytest
+```
+
+Try it against a local CrowdSec and Ollama without changing anything:
+
+```bash
+nazar --config examples/config.yaml config check
+nazar --config examples/config.yaml run --dry-run --once
+```
+
 ## Contributing
 
 Contributions are welcome once the first release is out. All contributors will be asked to sign a Contributor License Agreement (CLA).

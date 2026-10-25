@@ -7,14 +7,16 @@
 ```
 cli/
 ├── __init__.py      # main(): build parser, global options, dispatch, exit codes
-├── _output.py       # table / JSON printing, human durations ("3m ago")
+├── _context.py      # load secrets + config, set up logging and redaction
+├── _output.py       # table / JSON printing
 ├── run.py           # run
 ├── setup.py         # init, config check, status, test-model
 ├── incidents.py     # incidents, explain, report
 └── actions.py       # approve, reject, rollback
 ```
 
-Each module exposes `register(subparsers)` and handler functions `def cmd_x(args, app) -> int`.
+Each module exposes `register(subparsers)` and handler functions `def cmd_x(args) -> int`; a
+handler loads config through `_context.load(args)` and builds the `App` only if it needs one.
 Adding a command = one function + one `register` line.
 
 Global options: `--config PATH`, `--secrets PATH`, `--log-level`, `--log-format json|text`
