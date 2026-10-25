@@ -9,14 +9,13 @@ from __future__ import annotations
 import json
 import os
 import pwd
+import re
 import secrets
 import subprocess
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from importlib import resources
 from pathlib import Path
-
-import yaml
 
 from nazar.config import HMAC_KEY_ENV, parse_env_file
 from nazar.core.clock import SystemClock
@@ -109,11 +108,15 @@ def _write_secrets(path: Path, values: dict[str, str]) -> None:
     os.chmod(path, 0o600)
 
 
+_PASSWORD_LINE = re.compile(r"^password:[ \t]*(\S+)[ \t]*$", re.MULTILINE)
+
+
 def register_machine(machine_id: str, run: Runner, force: bool = False) -> str:
     """Create the CrowdSec machine and return its password.
 
-    The credentials go to stdout (``-f -``), never to the default credentials file, which
-    belongs to the CrowdSec agent.
+    The credentials go to the terminal (``-f -``), never to the default credentials file,
+    which belongs to the CrowdSec agent. Depending on the version, cscli prints them on stdout
+    or, like 1.8.1, on stderr after a status line, so both are searched for ``password:``.
     """
     argv = ["cscli", "machines", "add", machine_id, "--auto", "-f", "-"]
     if force:
@@ -125,14 +128,11 @@ def register_machine(machine_id: str, run: Runner, force: bool = False) -> str:
     if proc.returncode != 0:
         msg = (proc.stderr or proc.stdout or "").strip().splitlines()
         raise RuntimeError(f"cscli machines add failed: {msg[-1] if msg else proc.returncode}")
-    try:
-        creds = yaml.safe_load(proc.stdout)
-    except yaml.YAMLError as exc:
-        raise RuntimeError("cscli printed unexpected output") from exc
-    password = creds.get("password") if isinstance(creds, dict) else None
-    if not password:
-        raise RuntimeError("cscli output has no password")
-    return str(password)
+    for stream in (proc.stdout or "", proc.stderr or ""):
+        match = _PASSWORD_LINE.search(stream)
+        if match:
+            return match.group(1)
+    raise RuntimeError("cscli output has no password")
 
 
 def detect_captcha_bouncers(run: Runner) -> list[str]:

@@ -116,3 +116,17 @@ def test_existing_config_made_readable_for_service_group(tmp_path: Path) -> None
     bootstrap.init(paths, run=FakeRunner())
     assert _mode(paths.config) == 0o640
     assert paths.config.read_text() == "mode: dry_run\n"
+
+
+def test_credentials_on_stderr_like_cscli_1_8(tmp_path: Path) -> None:
+    """cscli 1.8.1 prints a status line and the credentials on stderr, nothing on stdout."""
+
+    def runner(argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
+        if list(argv[:3]) == ["cscli", "machines", "add"]:
+            err = "Machine 'nazar' successfully added to the local API.\n" + CREDS
+            return subprocess.CompletedProcess(list(argv), 0, "", err)
+        return subprocess.CompletedProcess(list(argv), 0, "[]", "")
+
+    paths = bootstrap.Paths(tmp_path)
+    assert not bootstrap.init(paths, run=runner).failed
+    assert parse_env_file(paths.secrets.read_text())["NAZAR_LAPI_PASSWORD"] == "s3cret-from-cscli"

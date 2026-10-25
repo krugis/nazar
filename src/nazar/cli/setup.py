@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import os
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +17,7 @@ from nazar.cli import _context
 from nazar.cli._output import err, print_json, print_table
 from nazar.collector.source import CURSOR_KEY, LAST_POLL_KEY
 from nazar.config import Config, Issue, check_config, load_config
+from nazar.core.log import setup_logging
 from nazar.daemon import HEALTH_KEY
 
 
@@ -156,6 +158,7 @@ async def _test_model(cfg: Config, args: argparse.Namespace) -> int:
 
 
 def cmd_init(args: argparse.Namespace) -> int:
+    setup_logging(args.log_level, args.log_format or ("text" if sys.stderr.isatty() else "json"))
     paths = bootstrap.Paths(args.root)
     if args.root == Path("/") and os.geteuid() != 0:
         err("error: nazar init must run as root (it writes /etc/nazar and calls cscli)")
