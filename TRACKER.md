@@ -19,7 +19,7 @@ Design: [DESIGN.md](DESIGN.md) (what/why) · [docs/lld/](docs/lld/README.md) (ho
 | ID | Item | LLD | Status | Notes |
 |---|---|---|---|---|
 | F-1 | Project skeleton: `pyproject.toml`, `.gitignore`, ruff/mypy/pytest config, package layout | [00](docs/lld/00-conventions.md) | done | |
-| F-2 | CI workflow (lint, format, mypy, tests on 3.11/3.12, build) | [13](docs/lld/13-deploy.md#ci-githubworkflowsciyml) | blocked | file ready in `.github/workflows/ci.yml` but not pushed: the GitHub token lacks `workflow` scope (`gh auth refresh -s workflow`) |
+| F-2 | CI workflow (lint, format, mypy, tests on 3.11/3.12, build) | [13](docs/lld/13-deploy.md#ci-githubworkflowsciyml) | done | green on GitHub Actions (run 40227829938): 412 tests on 3.11 and 3.12, sdist→wheel install check |
 | F-3 | `core`: clock, errors, JSON logging + redaction, sanitize | [00](docs/lld/00-conventions.md) | done | |
 | F-4 | Models: enums, durations, Event, Incident, Verdict + flat JSON schema, Decision, Approval | [01](docs/lld/01-models.md) | done | |
 | F-5 | Config: schema, loading, secrets, `check_config`; `examples/config.yaml` | [02](docs/lld/02-config.md) | done | |
