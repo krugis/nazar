@@ -1,7 +1,7 @@
 """Read `cscli decisions list -o json` on stdin and answer one question (e2e helper).
 
-    count            number of active decisions created by Nazar
-    banned <ip>      exit 1 if Nazar has an active decision on <ip>
+count            number of active decisions created by Nazar
+banned <ip>      exit 1 if Nazar has an active decision on <ip>
 """
 
 import json
