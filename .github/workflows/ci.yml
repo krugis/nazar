@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: mypy
+      - run: pytest -q
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install build
+      # Build the sdist, then the wheel from the sdist, as PyPI and distro builders do.
+      - run: python -m build
+      - name: Check packaged data
+        run: |
+          for f in nazar/prompts/triage.md nazar/data/config.example.yaml \
+                   nazar/data/eval_incidents.jsonl nazar/data/nazar.service; do
+            unzip -l dist/*.whl | grep -q "$f" || { echo "missing $f"; exit 1; }
+          done
+      - name: Installed wheel works without the source tree
+        run: |
+          python -m venv /tmp/v && /tmp/v/bin/pip install -q dist/*.whl
+          cd /tmp && /tmp/v/bin/nazar --version
+          /tmp/v/bin/python -I -c "from nazar.analyst import PromptTemplate; from nazar.analyst.evaluate import load_cases; assert PromptTemplate.load().version == 'triage-v1'; assert load_cases()"
+      - run: sh -n deploy/install.sh deploy/e2e/run.sh
