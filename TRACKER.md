@@ -6,6 +6,35 @@ with its tests and with the matching LLD file updated if anything changed. Statu
 
 Design: [DESIGN.md](DESIGN.md) (what/why) · [docs/lld/](docs/lld/README.md) (how).
 
+## Live validation log (resume here)
+
+**Oct 25, 2026: detect-only install on a shared 2-vCPU / 7.8 GB Debian 11 host.**
+CrowdSec 1.8.1 without a bouncer (LAPI moved to a free port), Ollama 0.40.11 capped at 2.4 GB RAM
+with a systemd drop-in, Python 3.12 under `/opt`, Nazar from this checkout via
+`install.sh --python`. `nazar init`, `status` and `config check` all pass.
+
+Bugs found and fixed live: `install.sh --python` + refusal of interpreters under home dirs;
+cscli 1.8.1 credentials on stderr; existing config unreadable by the service group;
+`num_predict` 512 too small for reasoning models (now 2048); `think` auto (`false` for reasoning
+models); approval IDs starting with `-`; a wall-clock dependency in a test fixture.
+
+Model work ([docs/models.md](docs/models.md)): `granite4:micro-h` (3B) scored 21/22 and became the
+default, but on this host it needs ~2.45 GB (Ollama repacks CPU weights; `num_ctx` barely matters),
+so it was OOM-killed inside its cap. `granite4:1b-h` (1.5B, Q8_0, 1.6 GB) was being evaluated
+when work paused; re-run `sudo -u nazar nazar --json test-model` to get its numbers.
+
+Next steps, in order:
+1. Finish the `granite4:1b-h` evaluation; keep it if accuracy is acceptable and no OOM kills,
+   else decide between a dedicated VM and the 3B model. Record the result in docs/models.md
+   (small-host recommendation) and V-3.
+2. Dry run with controlled attacks from a second server (SSH brute force + HTTP probing with a
+   prompt-injection user agent), then `nazar explain` one incident.
+3. Active-mode test (P-9): delete CrowdSec's own ban for the attacker, reset Nazar's database,
+   `mode: active`, run once, check `cscli decisions list` for `nazar/ai-triage`, approve if needed,
+   `nazar rollback`. No bouncer is installed, so nothing is actually blocked.
+4. Start the daemon (`systemctl start nazar`), watch `journalctl -u nazar`, `nazar report`.
+5. Later, on a dedicated VM: K-6 e2e stack, K-7 timed clean install, 4B/8B model candidates.
+
 ## Phase 0: Design
 
 | ID | Item | LLD | Status |
@@ -36,7 +65,7 @@ Design: [DESIGN.md](DESIGN.md) (what/why) · [docs/lld/](docs/lld/README.md) (ho
 | F-16 | App composition + Pipeline + Daemon (collect, triage, housekeeping) | [11](docs/lld/11-daemon.md) | done | |
 | F-17 | CLI skeleton + `run [--dry-run] [--once]`, `config check`, `status` | [12](docs/lld/12-cli.md) | done | |
 | F-18 | `test-model` + ~20 labelled eval incidents | [07](docs/lld/07-analyst.md#evaluation-nazar-test-model) | done | 22 cases |
-| F-19 | M1 acceptance on a live CrowdSec + Ollama (dry-run, valid verdicts, no CrowdSec changes) | DESIGN §9 | blocked | dev host has <1 GB free disk; needs a test VM. Also verify LAPI `include_capi`, default `limit`, sort order |
+| F-19 | M1 acceptance on a live CrowdSec + Ollama (dry-run, valid verdicts, no CrowdSec changes) | DESIGN §9 | wip | Oct 25: dry run on 145 real alerts (17 incidents) made **0** CrowdSec changes; grouping and policy correct. Valid-verdict part pending: 8/17 fell back to `unknown` because Ollama hit the host's memory cap (see Live validation log). LAPI `include_capi`/`limit`/sort order not yet checked |
 
 ## M2: Policy and enforcement (v0.2)
 
