@@ -24,8 +24,8 @@ Design: [DESIGN.md](DESIGN.md) (what/why) · [docs/lld/](docs/lld/README.md) (ho
 | F-4 | Models: enums, durations, Event, Incident, Verdict + flat JSON schema, Decision, Approval | [01](docs/lld/01-models.md) | done | |
 | F-5 | Config: schema, loading, secrets, `check_config`; `examples/config.yaml` | [02](docs/lld/02-config.md) | done | |
 | F-6 | Store: DB, migrations, repositories, audit log, retention | [03](docs/lld/03-store.md) | done | |
-| F-7 | LAPI client: login, token refresh, 401 retry, alerts, errors | [04](docs/lld/04-collector.md) | todo | |
-| F-8 | Alert normalization + polling source with cursor | [04](docs/lld/04-collector.md) | todo | |
+| F-7 | LAPI client: login, token refresh, 401 retry, alerts, errors | [04](docs/lld/04-collector.md) | done | |
+| F-8 | Alert normalization + polling source with cursor | [04](docs/lld/04-collector.md) | done | |
 | F-9 | Allow-list (protected ranges, host addresses, config CIDRs) | [05](docs/lld/05-prefilter.md) | todo | |
 | F-10 | Grouper: dedupe, incidents, needs-triage, skip-trivial | [05](docs/lld/05-prefilter.md) | todo | |
 | F-11 | Triage queue: priority, token bucket, overflow bulk summary | [05](docs/lld/05-prefilter.md) | todo | |
