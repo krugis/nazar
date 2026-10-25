@@ -95,6 +95,22 @@ in the table above, idempotent second run, and the `nazar` user can run the CLI.
 Root-run CLI commands open the daemon's database too; `Database` keeps SQLite's `-wal`/`-shm` files
 owned by the database owner so the daemon can still write them.
 
+## Docker image (`Dockerfile`)
+
+Two stages on `python:3.12-slim-bookworm`: build a venv in `/opt/nazar`, copy it into a clean image
+with a `nazar` user (uid/gid 10001), `ENTRYPOINT ["nazar"]`, `CMD ["run"]`, volume
+`/var/lib/nazar`. Config is mounted read-only at `/etc/nazar`; `--network host` reaches LAPI and
+Ollama on localhost. Verified: builds (152 MB), runs as uid 10001, `config check` passes with a
+mounted config.
+
+## Releasing
+
+1. Bump `version` in `pyproject.toml` and `nazar/__init__.py`, update `TRACKER.md`.
+2. `uv build` → `dist/*.whl` and `dist/*.tar.gz`. The wheel built from the sdist must contain
+   `nazar/prompts/triage.md` and the `nazar/data/` files (checked in CI).
+3. Tag `vX.Y.Z` and publish with `uv publish` (maintainer's PyPI token; trusted publishing from a
+   GitHub Actions release workflow is preferred once the workflow can be pushed).
+
 ## CI (`.github/workflows/ci.yml`)
 
 On push/PR: matrix Python 3.11, 3.12 → `pip install -e .[dev]` → `ruff check` → `ruff format --check`

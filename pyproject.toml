@@ -8,7 +8,7 @@ version = "0.2.0.dev0"
 description = "AI-assisted protection for Linux servers, built on CrowdSec"
 readme = "README.md"
 license = "Apache-2.0"
-license-files = ["LICENSE"]
+license-files = ["LICENSE", "THIRD_PARTY_LICENSES.md"]
 requires-python = ">=3.11"
 authors = [{ name = "Nazar contributors" }]
 classifiers = [
@@ -25,6 +25,11 @@ dependencies = [
     "pyyaml>=6.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/krugis/nazar-sec-nazar"
+Documentation = "https://github.com/krugis/nazar-sec-nazar/tree/main/docs"
+Issues = "https://github.com/krugis/nazar-sec-nazar/issues"
+
 [project.optional-dependencies]
 geoip = ["geoip2>=4.8"]
 dev = [
@@ -38,6 +43,10 @@ dev = [
 
 [project.scripts]
 nazar = "nazar.cli:main"
+
+[tool.hatch.build.targets.sdist]
+include = ["src", "prompts", "examples", "deploy", "docs", "tests", "README.md", "DESIGN.md",
+           "TRACKER.md", "LICENSE", "THIRD_PARTY_LICENSES.md"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/nazar"]

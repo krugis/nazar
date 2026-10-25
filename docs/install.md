@@ -117,6 +117,20 @@ sudo nazar rollback --since 1h
   and ASN databases from MaxMind (free account) and set `enrich.geoip_country_db` and
   `enrich.geoip_asn_db`.
 
+## Alternative: Docker
+
+The image runs Nazar as an unprivileged user (uid 10001). It needs the host network, so that
+`127.0.0.1` reaches LAPI and Ollama, plus your config and a data volume:
+
+```bash
+docker build -t nazar .
+sudo nazar init --skip-checks         # or create /etc/nazar by hand
+sudo chown -R 10001 /etc/nazar/secrets.env
+docker run -d --name nazar --restart unless-stopped --network host \
+  -v /etc/nazar:/etc/nazar:ro -v nazar-data:/var/lib/nazar nazar
+docker exec nazar nazar incidents
+```
+
 ## Uninstall
 
 ```bash
