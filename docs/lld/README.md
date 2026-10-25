@@ -42,8 +42,8 @@
 ### Dependency rules (enforced in review, checked by a test that inspects imports)
 
 1. `models` imports only the standard library and `pydantic`.
-2. `config` imports only `models`.
-3. `policy` imports only `models` and `config`. **No I/O, no clock, no randomness**: everything it
+2. `config` imports only `models` and `core`.
+3. `policy` imports only `models`, `config` and `core`. **No I/O, no clock, no randomness**: everything it
    needs is passed in. This keeps it exhaustively unit-testable (DESIGN §3.5).
 4. Stage packages (`collector`, `prefilter`, `enrich`, `analyst`, `actuator`, `notify`) may import
    `models`, `config`, `store` and `nazar.core`, but **never each other**. They are wired together only

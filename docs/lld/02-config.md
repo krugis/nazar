@@ -56,8 +56,9 @@ def check_config(cfg: Config) -> list[Issue]             # semantic checks for `
 ```
 
 `check_config` returns warnings that are not schema errors, e.g. required secret missing, store
-directory not writable, prompt file version differs from `analyst.prompt_version`, `mode: active`
-with an empty allow-list.
+directory not writable, `mode: active` with an empty allow-list, captcha in `auto_actions` without a
+captcha bouncer. The CLI adds the prompt-version check (prompt file version differs from
+`analyst.prompt_version`), since config must not import the analyst.
 
 `--dry-run` on the CLI produces a copy with `mode=dry_run` (`cfg.model_copy(update=…)`); config
 objects are never mutated.
