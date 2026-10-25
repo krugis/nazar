@@ -13,3 +13,12 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 @pytest.fixture
 def clock() -> FrozenClock:
     return FrozenClock()
+
+
+@pytest.fixture
+def store(tmp_path: Path, clock: FrozenClock):  # type: ignore[no-untyped-def]
+    from nazar.store import Store
+
+    s = Store(tmp_path / "nazar.db", clock)
+    yield s
+    s.close()

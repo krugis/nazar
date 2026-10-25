@@ -8,15 +8,17 @@ SQLite at `store.path` through stdlib `sqlite3` (decision D3).
 |---|---|
 | `db.py` | `Database`: open, pragmas, migrate, transaction helper |
 | `migrations.py` | `MIGRATIONS: list[tuple[int, str]]` |
-| `repos.py` | one small repository class per aggregate (below) |
-| `audit.py` | `AuditLog.append(...)` |
+| `incidents.py` | `IncidentRepo`, `EventRepo` |
+| `triage.py` | `VerdictRepo`, `DecisionRepo`, `ApprovalRepo` |
+| `state.py` | `KvRepo`, `CtiCacheRepo`, `AuditLog` |
+| `__init__.py` | `Store` facade (all repositories + `purge`) |
 
 ## Connection
 
 - `PRAGMA journal_mode=WAL; foreign_keys=ON; busy_timeout=5000; synchronous=NORMAL`.
-- One connection per process, `check_same_thread=False`, guarded by a `threading.Lock`; async
-  callers use `await asyncio.to_thread(...)` (D2). The CLI opens its own connection; WAL makes the
-  daemon and CLI safe to run together.
+- One connection per process, autocommit mode with explicit `BEGIN IMMEDIATE` transactions
+  (`with db.transaction():`, re-entrant). Calls are synchronous (D2). The CLI opens its own
+  connection; WAL makes the daemon and CLI safe to run together.
 - Timestamps: ISO-8601 UTC text (`2026-10-25T17:02:11Z`). JSON columns: `TEXT` holding JSON.
 - Directory created with mode `0750`, file `0640`.
 

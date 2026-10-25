@@ -73,7 +73,7 @@ Short records of choices that affect more than one module. New decisions get the
 | # | Decision | Reason |
 |---|---|---|
 | D1 | Runtime dependencies are only `httpx`, `pydantic`, `PyYAML`. Logging uses stdlib `logging` with a JSON formatter; the CLI uses `argparse`. This deviates from DESIGN §7 (`structlog`, `typer`). | Keeps the install light (~5 packages instead of ~12, no `rich`/`click`), smaller attack surface for a security tool. Both are easy to swap later because they sit behind `nazar.core.log` and `nazar.cli`. |
-| D2 | One asyncio process; blocking work (SQLite, `cscli`) runs in `asyncio.to_thread`. | No extra services or threads to reason about; SQLite traffic is tiny. |
+| D2 | One asyncio process. SQLite calls are short and run synchronously on the loop; `cscli` runs as an async subprocess. | No extra services or threads to reason about; SQLite traffic is tiny (a few rows per incident) and local. |
 | D3 | SQLite through the stdlib `sqlite3` with hand-written SQL and numbered migrations; no ORM. | Zero dependency, the schema is small, SQL stays reviewable. |
 | D4 | The policy engine is a pure function over an ordered list of rule functions. | Deterministic, table-testable, and new rules are one function each. |
 | D5 | Nazar identifies its own CrowdSec objects by scenario `nazar/ai-triage` and keeps the LAPI alert ID of every decision it creates. | Precise rollback (by ID), feedback-loop protection (by prefix). |

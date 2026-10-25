@@ -63,6 +63,8 @@ ignore = ["S101"]
 "tests/**" = ["S105", "S106", "S311"]
 # Names of environment variables that hold secrets, not secrets themselves.
 "src/nazar/config.py" = ["S105"]
+# SQL schema kept identical to docs/lld/03-store.md, comments included.
+"src/nazar/store/migrations.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.11"

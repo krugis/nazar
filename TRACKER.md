@@ -19,11 +19,11 @@ Design: [DESIGN.md](DESIGN.md) (what/why) · [docs/lld/](docs/lld/README.md) (ho
 | ID | Item | LLD | Status | Notes |
 |---|---|---|---|---|
 | F-1 | Project skeleton: `pyproject.toml`, `.gitignore`, ruff/mypy/pytest config, package layout | [00](docs/lld/00-conventions.md) | done | |
-| F-2 | CI workflow (lint, format, mypy, tests on 3.11/3.12, build) | [13](docs/lld/13-deploy.md#ci-githubworkflowsciyml) | done | packaged-data checks added with F-13/F-18 |
+| F-2 | CI workflow (lint, format, mypy, tests on 3.11/3.12, build) | [13](docs/lld/13-deploy.md#ci-githubworkflowsciyml) | blocked | file ready in `.github/workflows/ci.yml` but not pushed: the GitHub token lacks `workflow` scope (`gh auth refresh -s workflow`) |
 | F-3 | `core`: clock, errors, JSON logging + redaction, sanitize | [00](docs/lld/00-conventions.md) | done | |
 | F-4 | Models: enums, durations, Event, Incident, Verdict + flat JSON schema, Decision, Approval | [01](docs/lld/01-models.md) | done | |
 | F-5 | Config: schema, loading, secrets, `check_config`; `examples/config.yaml` | [02](docs/lld/02-config.md) | done | |
-| F-6 | Store: DB, migrations, repositories, audit log, retention | [03](docs/lld/03-store.md) | todo | |
+| F-6 | Store: DB, migrations, repositories, audit log, retention | [03](docs/lld/03-store.md) | done | |
 | F-7 | LAPI client: login, token refresh, 401 retry, alerts, errors | [04](docs/lld/04-collector.md) | todo | |
 | F-8 | Alert normalization + polling source with cursor | [04](docs/lld/04-collector.md) | todo | |
 | F-9 | Allow-list (protected ranges, host addresses, config CIDRs) | [05](docs/lld/05-prefilter.md) | todo | |
