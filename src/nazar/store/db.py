@@ -48,6 +48,20 @@ class Database:
         ):
             self._conn.execute(f"PRAGMA {pragma}")
         self.migrate()
+        self._fix_ownership()
+
+    def _fix_ownership(self) -> None:
+        """When root opens the daemon's database (CLI), keep SQLite's side files owned by the
+        database owner, or the daemon could no longer write them."""
+        if str(self.path) == ":memory:" or os.geteuid() != 0 or not self.path.exists():
+            return
+        st = self.path.stat()
+        if st.st_uid == 0:
+            return
+        for suffix in ("-wal", "-shm"):
+            side = self.path.with_name(self.path.name + suffix)
+            if side.exists():
+                os.chown(side, st.st_uid, st.st_gid)
 
     @property
     def schema_version(self) -> int:

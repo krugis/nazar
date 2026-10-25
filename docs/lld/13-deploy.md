@@ -4,8 +4,11 @@
 
 - `pyproject.toml` with `hatchling`; package name `nazar-sec`, command `nazar`.
 - Packaged data: `nazar/prompts/triage.md` (from `prompts/`), `nazar/data/eval_incidents.jsonl`,
-  `nazar/data/config.example.yaml` (copy of `examples/config.yaml`, kept in sync by a test).
-- Install: `pipx install nazar-sec` (M4). Later: `.deb` built from the wheel, optional Docker image.
+  `nazar/data/config.example.yaml` (from `examples/config.yaml`) and `nazar/data/nazar.service`
+  (from `deploy/`), all mapped at build time with hatch `force-include`. Loaders fall back to the
+  source checkout, so an editable install works too.
+- Install: `deploy/install.sh` (below) or `pipx install nazar-sec`. Later: `.deb` built from the
+  wheel. Optional Docker image (`Dockerfile`).
 - Third-party licenses (model, GeoLite2 if used) in `THIRD_PARTY_LICENSES.md`.
 
 ## Files on the host
@@ -46,6 +49,7 @@ ProtectKernelLogs=yes
 ProtectControlGroups=yes
 ProtectClock=yes
 ProtectHostname=yes
+ProtectProc=invisible
 RestrictNamespaces=yes
 RestrictRealtime=yes
 RestrictSUIDSGID=yes
@@ -53,11 +57,13 @@ LockPersonality=yes
 MemoryDenyWriteExecute=yes
 SystemCallArchitectures=native
 SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
 CapabilityBoundingSet=
 AmbientCapabilities=
 RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 ReadWritePaths=/var/lib/nazar
 StateDirectory=nazar
+StateDirectoryMode=0750
 UMask=0027
 
 [Install]
@@ -75,10 +81,19 @@ it requires relaxing the unit (documented, not default).
 POSIX `sh`, idempotent, `set -eu`, run as root:
 1. Check OS, Python ≥ 3.11, `cscli` present, Ollama reachable (warn only).
 2. Create system user `nazar` (`useradd --system --home /var/lib/nazar --shell /usr/sbin/nologin`).
-3. Install with `pipx` into `/opt/nazar` (`PIPX_HOME=/opt/nazar PIPX_BIN_DIR=/usr/local/bin`).
-4. `nazar init`.
-5. Install the unit, `systemctl daemon-reload`, enable but do **not** start in active mode; print
-   next steps (`nazar run --dry-run --once`, review, then `systemctl start nazar`).
+3. Install into a dedicated venv `/opt/nazar/venv` (`--from` a PyPI name, path, wheel or git URL;
+   default `nazar-sec`) and link `/usr/local/bin/nazar`. A plain venv instead of pipx: one less
+   prerequisite on servers.
+4. `nazar init` (creates the database owned by `nazar`; a failure is reported, not fatal).
+5. Install the unit (from `deploy/` or the packaged copy), `systemctl daemon-reload`, enable but do
+   **not** start; print next steps (`nazar run --dry-run --once`, review, then
+   `systemctl start nazar`).
+
+Verified in a clean `python:3.12-slim` container with a fake `cscli`: files, owners and modes as
+in the table above, idempotent second run, and the `nazar` user can run the CLI.
+
+Root-run CLI commands open the daemon's database too; `Database` keeps SQLite's `-wal`/`-shm` files
+owned by the database owner so the daemon can still write them.
 
 ## CI (`.github/workflows/ci.yml`)
 

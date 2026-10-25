@@ -19,6 +19,8 @@ from pathlib import Path
 import yaml
 
 from nazar.config import HMAC_KEY_ENV, parse_env_file
+from nazar.core.clock import SystemClock
+from nazar.store import Store
 
 NAZAR_USER = "nazar"
 CAPTCHA_BOUNCER_HINTS = ("nginx", "openresty", "traefik", "cloudflare", "haproxy")
@@ -214,6 +216,15 @@ def init(
             "policy.captcha_available: true to allow captcha decisions"
         )
     return report
+
+
+def prepare_database(path: Path) -> None:
+    """Create and migrate the database, owned by the service user."""
+    Store(path, SystemClock()).close()
+    ids = _nazar_ids()
+    for file in (path, path.with_name(path.name + "-wal"), path.with_name(path.name + "-shm")):
+        if file.exists():
+            _chown(file, ids)
 
 
 def apply_secrets_to_env(paths: Paths) -> None:

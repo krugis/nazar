@@ -1,0 +1,53 @@
+# Nazar: AI triage for CrowdSec. Hardened unit, see docs/lld/13-deploy.md.
+[Unit]
+Description=Nazar AI triage for CrowdSec
+Documentation=https://github.com/krugis/nazar-sec-nazar
+After=network-online.target crowdsec.service ollama.service
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=nazar
+Group=nazar
+EnvironmentFile=-/etc/nazar/secrets.env
+ExecStart=/usr/local/bin/nazar run
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=90
+
+# Sandboxing. Nazar needs network access (LAPI, Ollama, optional CTI and Telegram),
+# read access to /etc/nazar and write access to /var/lib/nazar only.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+ReadWritePaths=/var/lib/nazar
+StateDirectory=nazar
+StateDirectoryMode=0750
+UMask=0027
+
+# Without CTI and Telegram, Nazar only talks to localhost. Then also enable:
+# IPAddressAllow=localhost
+# IPAddressDeny=any
+
+[Install]
+WantedBy=multi-user.target

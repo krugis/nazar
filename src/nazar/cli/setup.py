@@ -172,6 +172,8 @@ def cmd_init(args: argparse.Namespace) -> int:
         cfg = cfg.model_copy(
             update={"store": cfg.store.model_copy(update={"path": paths.state / "nazar.db"})}
         )
+    bootstrap.prepare_database(cfg.store.path)
+    report.add("database", "ok", str(cfg.store.path))
     for issue in _issues(cfg):
         report.add("config check", issue.level, issue.message)
     if not args.skip_checks:
