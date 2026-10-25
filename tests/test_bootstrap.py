@@ -106,3 +106,13 @@ def test_cli_init_with_fake_cscli(
 def test_cli_init_requires_root(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(os, "geteuid", lambda: 1000)
     assert main(["init"]) == 1
+
+
+def test_existing_config_made_readable_for_service_group(tmp_path: Path) -> None:
+    paths = bootstrap.Paths(tmp_path)
+    paths.etc.mkdir(parents=True)
+    paths.config.write_text("mode: dry_run\n")
+    paths.config.chmod(0o604)  # world-readable, not group-readable
+    bootstrap.init(paths, run=FakeRunner())
+    assert _mode(paths.config) == 0o640
+    assert paths.config.read_text() == "mode: dry_run\n"

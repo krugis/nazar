@@ -170,7 +170,11 @@ def init(
     paths.etc.mkdir(mode=0o750, parents=True, exist_ok=True)
     _chown(paths.etc, ids, group_only=True)
     if paths.config.exists():
-        report.add("config", "skipped", f"{paths.config} exists, left unchanged")
+        # Content is never touched, but the service user must be able to read it.
+        mode = paths.config.stat().st_mode & 0o777
+        os.chmod(paths.config, (mode | 0o040) & ~0o007)
+        _chown(paths.config, ids, group_only=True)
+        report.add("config", "skipped", f"{paths.config} exists, content left unchanged")
     else:
         text = example_config()
         if machine_id != "nazar":
