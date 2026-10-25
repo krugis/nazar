@@ -55,8 +55,8 @@ Results merge in provider order; **the first non-null value wins**, so order exp
 - All strings pass through `sanitize.clean()` and are length-capped; CTI is third-party data.
 
 ### geoip
-`geoip2.database.Reader` on `enrich.geoip_db` path (config key added when implemented). Lookup in a
-thread. Missing package or file → provider not registered, info log at startup.
+`geoip2.database.Reader` on `enrich.geoip_country_db` (GeoLite2 Country or City) and
+`enrich.geoip_asn_db` (GeoLite2 ASN). Lookups run in a thread. Missing package or file → provider not registered, info log at startup.
 
 ### history
 From the store: `previous_incidents` = incidents for this IP other than this one within retention;

@@ -13,6 +13,7 @@ from nazar.app import App
 from nazar.core.clock import to_iso
 from nazar.core.errors import LapiError
 from nazar.core.log import get_logger
+from nazar.models import Actor
 from nazar.pipeline import PipelineResult, report_line
 from nazar.store import IncidentRow
 
@@ -48,6 +49,13 @@ class Daemon:
             prompt_version=self.app.analyst.template.version,
         )
         self._install_signals()
+        if not cfg.dry_run:
+            try:
+                reconciled = await self.app.actuator.reconcile()
+                if reconciled:
+                    log.warning("decisions_reconciled", count=reconciled)
+            except LapiError as exc:
+                log.warning("reconcile_failed", error=str(exc))
         self.restore_queue()
         await self.health_check()
         tasks = [
@@ -189,6 +197,15 @@ class Daemon:
         while not self._stop.is_set():
             window = timedelta(minutes=app.cfg.prefilter.incident_window_minutes)
             app.store.incidents.close_stale(app.clock.now() - window)
+            for approval in app.store.approvals.expire_due():
+                app.store.audit.append(
+                    Actor.SYSTEM,
+                    "approval",
+                    {"status": "expired"},
+                    incident_id=approval.incident_id,
+                    ref_id=approval.approval_id,
+                )
+                log.info("approval_expired", approval_id=approval.approval_id)
             await self.health_check()
             last = app.store.kv.get("retention.last_run")
             if last is None or last < to_iso(app.clock.now() - RETENTION_EVERY):

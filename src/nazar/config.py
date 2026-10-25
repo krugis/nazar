@@ -175,6 +175,14 @@ class NotifierConfig(_Section):
         return value
 
 
+class EnrichConfig(_Section):
+    timeout_seconds: float = Field(default=5.0, gt=0)
+    geoip_country_db: Path | None = None
+    """MaxMind GeoLite2 Country or City database (needs the ``geoip`` extra)."""
+    geoip_asn_db: Path | None = None
+    """MaxMind GeoLite2 ASN database."""
+
+
 class HostContextConfig(_Section):
     exposed_services: list[str] = Field(default_factory=list)
 
@@ -191,6 +199,7 @@ class Config(_Section):
     prefilter: PrefilterConfig = Field(default_factory=PrefilterConfig)
     analyst: AnalystConfig = Field(default_factory=AnalystConfig)
     policy: PolicyConfig = Field(default_factory=PolicyConfig)
+    enrich: EnrichConfig = Field(default_factory=EnrichConfig)
     notifier: NotifierConfig = Field(default_factory=NotifierConfig)
     host_context: HostContextConfig = Field(default_factory=HostContextConfig)
     store: StoreConfig = Field(default_factory=StoreConfig)

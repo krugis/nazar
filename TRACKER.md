@@ -46,9 +46,9 @@ Design: [DESIGN.md](DESIGN.md) (what/why) · [docs/lld/](docs/lld/README.md) (ho
 | P-2 | Actuator: LAPI backend, idempotency, refusal guards | [09](docs/lld/09-actuator.md) | done | |
 | P-3 | Rollback (by alert ID, by filter) + crash reconcile | [09](docs/lld/09-actuator.md#rollback) | done | |
 | P-4 | cscli fallback backend | [09](docs/lld/09-actuator.md#cscli-fallback) | done | off by default |
-| P-5 | CTI provider + cache + circuit breaker | [06](docs/lld/06-enrich.md#cti-crowdsec-cti) | todo | |
-| P-6 | Optional GeoIP provider | [06](docs/lld/06-enrich.md#geoip) | todo | |
-| P-7 | `active` mode wired in the pipeline | [11](docs/lld/11-daemon.md) | todo | |
+| P-5 | CTI provider + cache + circuit breaker | [06](docs/lld/06-enrich.md#cti-crowdsec-cti) | done | |
+| P-6 | Optional GeoIP provider | [06](docs/lld/06-enrich.md#geoip) | done | config `enrich.geoip_country_db` / `geoip_asn_db`; untested against real .mmdb files |
+| P-7 | `active` mode wired in the pipeline | [11](docs/lld/11-daemon.md) | done | approval requests are stored; notifications and approve/reject come in M3 |
 | P-8 | CLI: `incidents`, `explain`, `rollback` | [12](docs/lld/12-cli.md) | todo | |
 | P-9 | M2 acceptance: allow-listed never banned (tests), decisions visible in `cscli decisions list`, removable by rollback | DESIGN §9 | todo | live part needs the test VM; verify payload fields and custom origin |
 | P-10 | Import CrowdSec allow-lists (`crowdsec.import_allowlists`, LAPI `GET /v1/allowlists`, hourly refresh) | [05](docs/lld/05-prefilter.md#allowlist) | todo | verify auth for that endpoint |

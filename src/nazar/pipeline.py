@@ -6,6 +6,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import timedelta
 
+from nazar.actuator import Actuator, ApplyResult
 from nazar.analyst import Analyst
 from nazar.config import Config
 from nazar.core.clock import Clock
@@ -28,6 +29,9 @@ class PipelineResult:
     decision: Decision | None
     skipped_reason: str | None = None
     valid_output: bool = True
+    decision_id: int | None = None
+    applied: ApplyResult | None = None
+    approval_id: str | None = None
 
 
 def build_incident(inc: IncidentRow, events: Sequence[EventRow], cfg: Config) -> Incident:
@@ -60,7 +64,9 @@ class Pipeline:
         allowlist: AllowList,
         enricher: Enricher,
         analyst: Analyst,
+        actuator: Actuator | None = None,
     ) -> None:
+        self._actuator = actuator
         self._cfg = cfg
         self._store = store
         self._clock = clock
@@ -96,12 +102,49 @@ class Pipeline:
             attempts=triage.attempts,
             latency_ms=triage.latency_ms,
         )
-        decision = self._decide_and_store(incident, record, label)
-        return PipelineResult(incident, triage.verdict, decision, valid_output=triage.valid_output)
+        decision, decision_id = self._decide_and_store(incident, record, label)
+        applied, approval_id = await self._carry_out(incident, decision, decision_id)
+        return PipelineResult(
+            incident,
+            triage.verdict,
+            decision,
+            valid_output=triage.valid_output,
+            decision_id=decision_id,
+            applied=applied,
+            approval_id=approval_id,
+        )
+
+    async def _carry_out(
+        self, incident: Incident, decision: Decision, decision_id: int
+    ) -> tuple[ApplyResult | None, str | None]:
+        """Act on the policy outcome. Only ``auto`` enforcing decisions touch CrowdSec."""
+        if decision.outcome is Outcome.AUTO and decision.action.enforces:
+            if self._actuator is None:
+                log.error("no_actuator_configured", decision_id=decision_id)
+                return None, None
+            return await self._actuator.apply(decision_id), None
+        if decision.outcome is Outcome.APPROVAL:
+            ttl = timedelta(minutes=self._cfg.notifier.approval_ttl_minutes)
+            approval = self._store.approvals.create(decision_id, ttl)
+            self._store.audit.append(
+                Actor.POLICY,
+                "approval",
+                {"status": "pending", "expires_at": approval.expires_at.isoformat()},
+                incident_id=incident.incident_id,
+                ref_id=approval.approval_id,
+            )
+            log.info(
+                "approval_requested",
+                incident_id=incident.incident_id,
+                approval_id=approval.approval_id,
+                action=decision.action.value,
+            )
+            return None, approval.approval_id
+        return None, None
 
     def _decide_and_store(
         self, incident: Incident, record: VerdictRecord, allowlist_match: str | None
-    ) -> Decision:
+    ) -> tuple[Decision, int]:
         store = self._store
         since = self._clock.now() - timedelta(hours=1)
         inp = PolicyInput(
@@ -147,7 +190,7 @@ class Pipeline:
             action=decision.action.value,
             outcome=decision.outcome.value,
         )
-        return decision
+        return decision, decision_id
 
     def _skip(
         self, incident: Incident, reason: str, allowlist_match: str | None = None
@@ -160,8 +203,10 @@ class Pipeline:
             input=incident.model_input(),
             skipped_reason=reason,
         )
-        decision = self._decide_and_store(incident, record, allowlist_match)
-        return PipelineResult(incident, verdict, decision, skipped_reason=reason)
+        decision, decision_id = self._decide_and_store(incident, record, allowlist_match)
+        return PipelineResult(
+            incident, verdict, decision, skipped_reason=reason, decision_id=decision_id
+        )
 
     def record_skipped(self, incident_ids: Sequence[str], reason: str) -> None:
         """Record incidents that will not reach the model (rate-limit overflow, failures)."""
@@ -179,6 +224,10 @@ def report_line(result: PipelineResult) -> str:
     intended = d.intended_outcome.value if d else Outcome.NO_ACTION.value
     action = d.action.value if d else "none"
     extra = f" skipped={result.skipped_reason}" if result.skipped_reason else ""
+    if result.applied is not None:
+        extra += f" applied={result.applied.status.value}"
+    if result.approval_id:
+        extra += f" approval={result.approval_id}"
     return (
         f"{inc.incident_id} {inc.source_ip:<15} {','.join(inc.scenarios)} -> {v.verdict.value}"
         f"/{v.severity.value} conf={v.confidence:.2f} action={action} would={intended}{extra}"
