@@ -20,13 +20,13 @@ models); approval IDs starting with `-`; a wall-clock dependency in a test fixtu
 
 Model work ([docs/models.md](docs/models.md)): `granite4:micro-h` (3B) scored 21/22 and became the
 default, but on this host it needs ~2.45 GB (Ollama repacks CPU weights; `num_ctx` barely matters),
-so it was OOM-killed inside its cap. `granite4:1b-h` (1.5B, Q8_0, 1.6 GB) was being evaluated
-when work paused; re-run `sudo -u nazar nazar --json test-model` to get its numbers.
+so it was OOM-killed inside its cap. `granite4:1b-h` (1.5B, Q8_0, 1.6 GB): **72.7% / 77.3%**, 0% invalid, ~36 s, no OOM;
+its misses under-report (4 attacks rated benign, incl. the prompt-injection case). Usable for
+pipeline testing on this host; not good enough as the default.
 
 Next steps, in order:
-1. Finish the `granite4:1b-h` evaluation; keep it if accuracy is acceptable and no OOM kills,
-   else decide between a dedicated VM and the 3B model. Record the result in docs/models.md
-   (small-host recommendation) and V-3.
+1. Model decision: keep `granite4:1b-h` here for pipeline tests (done, recorded in
+   docs/models.md), or move to a host where Ollama gets >= 3 GB and use `granite4:micro-h`.
 2. Dry run with controlled attacks from a second server (SSH brute force + HTTP probing with a
    prompt-injection user agent), then `nazar explain` one incident.
 3. Active-mode test (P-9): delete CrowdSec's own ban for the attacker, reset Nazar's database,
@@ -113,7 +113,7 @@ Next steps, in order:
 |---|---|---|
 | V-1 | Freeze config format and data contracts | todo |
 | V-2 | Performance: p95 < 60 s per incident on 4 vCPU, 500 alerts/h in dry-run | todo |
-| V-3 | Model comparison via `test-model` (DESIGN open question 1) | wip | Oct 25, 2 vCPU host: **granite4:micro-h 21/22, 0% invalid, ~50 s** → new default; security-slm-1.5b rejected (reasoning overruns, no answer in 2/3 runs); Cybersecurity-Qwen2.5-3B rejected (everything malicious at 1.0). Details: [docs/models.md](docs/models.md). Next: 4B/8B candidates on a host with 8 GB RAM |
+| V-3 | Model comparison via `test-model` (DESIGN open question 1) | wip | Oct 25, 2 vCPU host: **granite4:micro-h 21/22, 0% invalid, ~50 s** → new default; security-slm-1.5b rejected (reasoning overruns, no answer in 2/3 runs); Cybersecurity-Qwen2.5-3B rejected (everything malicious at 1.0). granite4:1b-h 72.7%/77.3% (fits small hosts, under-reports). Details: [docs/models.md](docs/models.md). Next: 4B/8B candidates on a host with 8 GB RAM |
 
 ## Open items to verify (from the LLD)
 
