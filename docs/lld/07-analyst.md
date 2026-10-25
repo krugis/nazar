@@ -37,7 +37,7 @@ class LlmBackend(Protocol):
   "messages": [{"role": "system", "content": "…"}, {"role": "user", "content": "…"}],
   "stream": false,
   "format": { VERDICT_JSON_SCHEMA },
-  "options": {"temperature": 0.1, "num_ctx": 4096, "num_predict": 512},
+  "options": {"temperature": 0.1, "num_ctx": 4096, "num_predict": 2048},
   "keep_alive": "30m",
   "think": false            // only sent when analyst.think is not null
 }
@@ -46,6 +46,10 @@ class LlmBackend(Protocol):
 - Answer: `response.message.content`. `response.message.thinking`, if present, is **discarded**:
   never parsed, never stored, never shown (reasoning text is not the answer).
 - `think` is optional because Ollama returns an error for models without thinking support.
+- `num_predict` covers the reasoning **and** the answer. Verified live with the default model
+  (Ollama 0.40.11): it always reasons (~300 tokens) before a ~150-token JSON answer, even with
+  `think: false`; at 512 the budget ran out and `content` was empty. Default is 2048.
+  `done_reason == "length"` logs `model_output_truncated` with a hint to raise it.
 - Timeout `analyst.timeout_seconds`; HTTP or timeout errors → `LlmError`.
 - `health()`: `GET /api/version` (reachable, version) and `GET /api/tags` (model present: name
   match with or without `:latest`).

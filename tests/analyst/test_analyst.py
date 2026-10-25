@@ -85,7 +85,7 @@ async def test_ollama_payload_and_thinking_ignored(http: httpx.AsyncClient) -> N
     assert result.content == VALID and "secret plan" not in result.content
     body = json.loads(route.calls[0].request.content)
     assert body["stream"] is False and body["format"] == VERDICT_JSON_SCHEMA
-    assert body["options"] == {"temperature": 0.1, "num_ctx": 4096, "num_predict": 512}
+    assert body["options"] == {"temperature": 0.1, "num_ctx": 4096, "num_predict": 2048}
     assert "think" not in body
 
 
@@ -134,3 +134,22 @@ async def test_ollama_health(http: httpx.AsyncClient) -> None:
     assert h.reachable and h.model_present and h.version == "0.12"
     h2 = await OllamaBackend(AnalystConfig(model="other"), http).health()
     assert h2.reachable and not h2.model_present
+
+
+@respx.mock
+async def test_ollama_truncation_is_logged(
+    http: httpx.AsyncClient, caplog: pytest.LogCaptureFixture
+) -> None:
+    respx.post(f"{OLLAMA}/api/chat").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "message": {"content": "", "thinking": "long reasoning"},
+                "done_reason": "length",
+            },
+        )
+    )
+    with caplog.at_level("WARNING"):
+        result = await OllamaBackend(AnalystConfig(), http).chat([], {})
+    assert result.content == ""
+    assert any(r.getMessage() == "model_output_truncated" for r in caplog.records)

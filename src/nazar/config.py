@@ -91,7 +91,8 @@ class AnalystConfig(_Section):
     max_calls_per_minute: int = Field(default=10, ge=1)
     prompt_version: str = "triage-v1"
     num_ctx: int = Field(default=4096, ge=512)
-    num_predict: int = Field(default=512, ge=64)
+    num_predict: int = Field(default=2048, ge=64)
+    """Token budget for reasoning *and* answer: reasoning models think before the JSON."""
     max_queue: int = Field(default=200, ge=1)
     think: bool | None = None
     keep_alive: str = "30m"

@@ -10,6 +10,9 @@ import httpx
 from nazar.analyst.backend import BackendHealth, ChatResult
 from nazar.config import AnalystConfig
 from nazar.core.errors import LlmError
+from nazar.core.log import get_logger
+
+log = get_logger(__name__)
 
 
 def _same_model(name: str, wanted: str) -> bool:
@@ -63,6 +66,12 @@ class OllamaBackend:
         except (ValueError, KeyError, TypeError, AttributeError) as exc:
             raise LlmError("Ollama returned an unexpected response") from exc
         # message["thinking"] is deliberately ignored: reasoning text is never the answer.
+        if data.get("done_reason") == "length":
+            log.warning(
+                "model_output_truncated",
+                num_predict=self._cfg.num_predict,
+                hint="token limit hit (reasoning counts too): raise analyst.num_predict",
+            )
         return ChatResult(
             content=str(content),
             latency_ms=int((time.monotonic() - start) * 1000),
