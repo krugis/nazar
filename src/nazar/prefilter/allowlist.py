@@ -8,9 +8,9 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from nazar.config import PolicyConfig
+from nazar.core.net import parse_ip
 
 IPNetwork = ipaddress.IPv4Network | ipaddress.IPv6Network
-IPAddress = ipaddress.IPv4Address | ipaddress.IPv6Address
 
 PROTECTED: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("loopback", ("127.0.0.0/8", "::1/128")),
@@ -22,16 +22,6 @@ PROTECTED: tuple[tuple[str, tuple[str, ...]], ...] = (
 )
 
 
-def _parse_ip(value: str) -> IPAddress | None:
-    try:
-        ip = ipaddress.ip_address(value.strip())
-    except ValueError:
-        return None
-    if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped:
-        return ip.ipv4_mapped
-    return ip
-
-
 class AllowList:
     """Immutable, I/O-free matcher. The first matching entry's label wins."""
 
@@ -40,7 +30,7 @@ class AllowList:
 
     def match(self, ip: str) -> str | None:
         """Label of the first network containing ``ip``. Invalid IPs match as ``invalid``."""
-        addr = _parse_ip(ip)
+        addr = parse_ip(ip)
         if addr is None:
             return "invalid"
         for label, net in self._entries:
@@ -85,7 +75,7 @@ def local_addresses(proc: Path = Path("/proc/net")) -> set[str]:
                 found.add(str(ipaddress.IPv6Address(int(raw, 16))))
     except (OSError, ValueError):
         pass
-    return {a for a in found if _parse_ip(a) is not None}
+    return {a for a in found if parse_ip(a) is not None}
 
 
 def build_allowlist(

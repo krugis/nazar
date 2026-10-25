@@ -17,6 +17,7 @@ Applies enforcing decisions **only through CrowdSec** and rolls them back (DESIG
 class DecisionBackend(Protocol):
     async def add(self, req: BanRequest) -> str                   # returns CrowdSec alert id
     async def remove(self, crowdsec_alert_id: str, ip: str) -> int  # number of decisions removed
+    async def find(self, req: BanRequest) -> str | None           # crash reconcile (by message)
 
 @dataclass(frozen=True)
 class BanRequest:
@@ -37,10 +38,16 @@ class Actuator:
 `outcome == auto`, `action.enforces`, mode is `active`, and the IP is not allow-listed (re-checked
 here as a last guard). The model's text never reaches this module; only validated fields do.
 
+`LapiDecisionBackend` talks to CrowdSec through the `LapiDecisionApi` protocol (the five LAPI calls it
+needs). `app.py` passes the collector's `LapiClient`, so the actuator never imports the collector
+(dependency rule 4).
+
 ## Idempotency
 
 `idempotency_key = sha256(f"{incident_id}|{action}|{ip}")`, unique in `decisions`. Before pushing:
-if a decision with that key is already applied and not rolled back → `already_applied`, no call.
+if a decision with that key is already applied and not rolled back → `already_applied`, no call. If
+that earlier decision was **rolled back**, a new decision for the same incident is `refused`: a human
+removed it, so Nazar must not silently ban again.
 The key is written before the push and `applied_at`/`crowdsec_alert_id` right after, in one
 transaction per step. If the process dies between push and record, the next start finds the
 unapplied row and reconciles: `GET /v1/alerts?scenario=nazar/ai-triage&ip=<ip>` and match the

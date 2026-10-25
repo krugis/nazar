@@ -43,9 +43,9 @@ Design: [DESIGN.md](DESIGN.md) (what/why) · [docs/lld/](docs/lld/README.md) (ho
 | ID | Item | LLD | Status | Notes |
 |---|---|---|---|---|
 | P-1 | Policy engine rules R1–R11 + table and property tests | [08](docs/lld/08-policy.md) | done | engine takes an `IpMatcher` protocol so policy never imports prefilter |
-| P-2 | Actuator: LAPI backend, idempotency, refusal guards | [09](docs/lld/09-actuator.md) | todo | |
-| P-3 | Rollback (by alert ID, by filter) + crash reconcile | [09](docs/lld/09-actuator.md#rollback) | todo | |
-| P-4 | cscli fallback backend | [09](docs/lld/09-actuator.md#cscli-fallback) | todo | off by default |
+| P-2 | Actuator: LAPI backend, idempotency, refusal guards | [09](docs/lld/09-actuator.md) | done | |
+| P-3 | Rollback (by alert ID, by filter) + crash reconcile | [09](docs/lld/09-actuator.md#rollback) | done | |
+| P-4 | cscli fallback backend | [09](docs/lld/09-actuator.md#cscli-fallback) | done | off by default |
 | P-5 | CTI provider + cache + circuit breaker | [06](docs/lld/06-enrich.md#cti-crowdsec-cti) | todo | |
 | P-6 | Optional GeoIP provider | [06](docs/lld/06-enrich.md#geoip) | todo | |
 | P-7 | `active` mode wired in the pipeline | [11](docs/lld/11-daemon.md) | todo | |

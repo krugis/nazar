@@ -9,6 +9,7 @@ src/nazar/
 │   ├── clock.py         # Clock protocol, SystemClock, FrozenClock (tests)
 │   ├── errors.py        # NazarError hierarchy
 │   ├── log.py           # JSON logging setup, secret redaction
+│   ├── net.py           # parse_ip, IpMatcher protocol (allow-list interface)
 │   └── sanitize.py      # control-char stripping, truncation (used by collector and analyst)
 ├── models/              # 01
 ├── config.py            # 02

@@ -3,15 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Protocol
 
+from nazar.core.net import IpMatcher
 from nazar.models import Action, Incident, Outcome, Verdict
 
-
-class IpMatcher(Protocol):
-    """Anything that can say whether an IP is allow-listed (``prefilter.AllowList``)."""
-
-    def match(self, ip: str) -> str | None: ...
+__all__ = ["Draft", "IpMatcher", "PolicyInput"]
 
 
 @dataclass(frozen=True)
