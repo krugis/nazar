@@ -4,7 +4,9 @@
 
 > *Nazar* is the Turkish name for the blue evil-eye charm that has watched over doorways for centuries. This project is a modern nazar for your servers: it watches, recognizes the evil eye, and wards it off.
 
-> **Status: pre-alpha / design phase.** Nothing here is production-ready yet. See [DESIGN.md](DESIGN.md) for the architecture and roadmap.
+> **Status: pre-alpha.** v1 features (triage, policy, CrowdSec decisions, Telegram approvals) are
+> implemented and tested against recorded API responses; validation on live CrowdSec installs is in
+> progress. Run it in dry-run mode first. See [DESIGN.md](DESIGN.md) and [TRACKER.md](TRACKER.md).
 
 ---
 
@@ -35,7 +37,7 @@ The model runs **entirely on your server**. Nazar needs no GPU and no cloud LLM,
 
 ## Features
 
-### v1: AI triage (in development)
+### v1: AI triage (implemented, in validation)
 - Reads alerts from the CrowdSec Local API
 - Enrichment: CrowdSec CTI reputation, GeoIP/ASN, local history for the IP
 - Local triage with a small security model ([security-slm-1.5b](https://huggingface.co/Nguuma/security-slm-unsloth-1.5b), GGUF Q4_K_M, ~1.2 GB RAM) through [Ollama](https://ollama.com)
@@ -61,7 +63,7 @@ Nazar is a security tool, so it must not become an attack surface.
 4. **Everything is bounded and reversible.** Bans have a maximum duration and can be rolled back in one command.
 5. **Fail safe.** If the model is down or returns invalid output, CrowdSec keeps protecting you as before.
 
-## Requirements (planned)
+## Requirements
 
 - Linux (Debian/Ubuntu or RHEL family), x86_64 or arm64
 - [CrowdSec](https://docs.crowdsec.net/) Security Engine with at least one bouncer
@@ -71,26 +73,41 @@ Nazar is a security tool, so it must not become an attack surface.
 
 ## Quick start
 
-*Coming with the first release.* The planned flow is:
-
 ```bash
-# 1. Install CrowdSec and a bouncer (see the CrowdSec docs)
+# 1. Install CrowdSec and a bouncer (see the CrowdSec docs), and Ollama
 # 2. Pull the model
 ollama pull hf.co/Nguuma/security-slm-unsloth-1.5b
-# 3. Install Nazar
-pipx install nazar-sec
-# 4. Register Nazar with CrowdSec and create its config
-sudo nazar init
-# 5. Run in dry-run mode first
-sudo nazar run --dry-run
+# 3. Install Nazar (creates the nazar user, config, secrets, CrowdSec machine, systemd unit)
+git clone https://github.com/krugis/nazar-sec-nazar && cd nazar-sec-nazar
+sudo sh deploy/install.sh --from .
+# 4. Add your own IPs to policy.allowlist_cidrs, then check
+sudo nano /etc/nazar/config.yaml && sudo nazar config check
+# 5. Dry run first: triage and report, no changes to CrowdSec
+sudo -u nazar nazar run --dry-run --once
+sudo systemctl start nazar
 ```
+
+Day-to-day commands:
+
+| Command | What it does |
+|---|---|
+| `nazar status` | health of LAPI, Ollama and the model |
+| `nazar incidents --since 24h` | incidents with verdicts and outcomes |
+| `nazar explain <incident>` | the full trail: events, enrichment, verdict, policy reasons, actions |
+| `nazar approve <id>` / `nazar reject <id>` | answer an approval request |
+| `nazar rollback --since 1h` | remove decisions Nazar created |
+| `nazar report` | the summary of the last 24 hours |
+| `nazar test-model` | evaluate the model on labelled incidents |
+
+Documentation: [install](docs/install.md) · [configuration](docs/configuration.md) ·
+[safety model](docs/safety.md) · [FAQ](docs/faq.md) · [low-level design](docs/lld/README.md)
 
 ## Roadmap
 
-- [ ] v0.1: alert ingestion, triage, dry-run reports
-- [ ] v0.2: policy engine and CrowdSec decisions
-- [ ] v0.3: Telegram approvals and daily summary
-- [ ] v0.4: packaging (pipx, .deb, Docker) and docs
+- [x] v0.1: alert ingestion, triage, dry-run reports (live validation pending)
+- [x] v0.2: policy engine and CrowdSec decisions (live validation pending)
+- [x] v0.3: Telegram approvals and daily summary
+- [ ] v0.4: packaging (install script and docs done; PyPI release, .deb, Docker image)
 - [ ] v1.0: stable v1
 - [ ] v2: Nazar Radar (news-driven response)
 

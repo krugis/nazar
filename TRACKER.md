@@ -73,7 +73,7 @@ Design: [DESIGN.md](DESIGN.md) (what/why) · [docs/lld/](docs/lld/README.md) (ho
 | K-1 | `nazar init` (machine registration, secrets, bouncer detection, self-test) | [12](docs/lld/12-cli.md) | done |
 | K-2 | Hardened systemd unit + `install.sh` | [13](docs/lld/13-deploy.md) | done |
 | K-3 | Prompt-injection test corpus (user agents, usernames, URLs) | [00](docs/lld/00-conventions.md#testing) | done |
-| K-4 | Docs: install, configuration, safety model, FAQ; `THIRD_PARTY_LICENSES.md` | [13](docs/lld/13-deploy.md) | todo |
+| K-4 | Docs: install, configuration, safety model, FAQ; `THIRD_PARTY_LICENSES.md` | [13](docs/lld/13-deploy.md) | done |
 | K-5 | pipx package publishing; optional Docker image | [13](docs/lld/13-deploy.md#packaging) | todo |
 | K-6 | E2E docker-compose stack (CrowdSec + Ollama + Nazar) | [13](docs/lld/13-deploy.md#end-to-end-m4-design-10) | todo |
 | K-7 | M4 acceptance: clean Ubuntu 24.04 install in < 15 min | DESIGN §9 | todo |
