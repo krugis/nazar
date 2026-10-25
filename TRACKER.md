@@ -75,8 +75,8 @@ Design: [DESIGN.md](DESIGN.md) (what/why) · [docs/lld/](docs/lld/README.md) (ho
 | K-3 | Prompt-injection test corpus (user agents, usernames, URLs) | [00](docs/lld/00-conventions.md#testing) | done |
 | K-4 | Docs: install, configuration, safety model, FAQ; `THIRD_PARTY_LICENSES.md` | [13](docs/lld/13-deploy.md) | done |
 | K-5 | pipx package publishing; optional Docker image | [13](docs/lld/13-deploy.md#packaging) | wip | wheel + sdist verified (packaged data, licenses, works without the checkout); Dockerfile verified; **PyPI publish pending** (maintainer account/token) |
-| K-6 | E2E docker-compose stack (CrowdSec + Ollama + Nazar) | [13](docs/lld/13-deploy.md#end-to-end-m4-design-10) | todo |
-| K-7 | M4 acceptance: clean Ubuntu 24.04 install in < 15 min | DESIGN §9 | todo |
+| K-6 | E2E docker-compose stack (CrowdSec + Ollama + Nazar) | [13](docs/lld/13-deploy.md#end-to-end-m4-design-10) | wip | written (`deploy/e2e/`), **not yet executed**: dev host lacks disk for the images and model; run on the test VM together with F-19, P-9, K-7 |
+| K-7 | M4 acceptance: clean Ubuntu 24.04 install in < 15 min | DESIGN §9 | blocked | install.sh verified in a python:3.12-slim container with a fake cscli; needs a real Ubuntu 24.04 VM with CrowdSec |
 
 ## v1.0
 

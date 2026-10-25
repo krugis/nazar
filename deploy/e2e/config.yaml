@@ -1,0 +1,19 @@
+# Nazar config for the e2e stack. Mode is switched per step with --dry-run.
+mode: active
+crowdsec:
+  lapi_url: http://crowdsec:8080
+  machine_id: nazar-e2e
+collector:
+  interval_seconds: 5
+  lookback: 1h
+analyst:
+  ollama_url: http://ollama:11434
+  timeout_seconds: 300
+  max_calls_per_minute: 30
+policy:
+  # The "partner" attacker below must never be banned, whatever the model says.
+  allowlist_cidrs: ["192.0.2.0/24"]
+host_context:
+  exposed_services: [ssh, nginx]
+store:
+  path: /var/lib/nazar/nazar.db

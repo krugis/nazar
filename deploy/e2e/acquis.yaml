@@ -1,0 +1,9 @@
+filenames:
+  - /var/log/e2e/auth.log
+labels:
+  type: syslog
+---
+filenames:
+  - /var/log/e2e/access.log
+labels:
+  type: nginx

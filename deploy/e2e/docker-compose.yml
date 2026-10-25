@@ -1,0 +1,42 @@
+# End-to-end stack: CrowdSec + Ollama + Nazar (DESIGN §10, LLD 13). Run with ./run.sh.
+# Image tags can be overridden, e.g. CROWDSEC_IMAGE=crowdsecurity/crowdsec:v1.6.8 ./run.sh
+name: nazar-e2e
+
+services:
+  crowdsec:
+    image: ${CROWDSEC_IMAGE:-crowdsecurity/crowdsec:latest}
+    environment:
+      COLLECTIONS: "crowdsecurity/sshd crowdsecurity/nginx crowdsecurity/base-http-scenarios"
+      DISABLE_ONLINE_API: "true"
+    volumes:
+      - ./acquis.yaml:/etc/crowdsec/acquis.yaml:ro
+      - logs:/var/log/e2e
+      - crowdsec-data:/var/lib/crowdsec/data
+    healthcheck:
+      test: ["CMD", "cscli", "lapi", "status"]
+      interval: 10s
+      retries: 30
+
+  ollama:
+    image: ${OLLAMA_IMAGE:-ollama/ollama:latest}
+    volumes:
+      - ollama-models:/root/.ollama
+
+  nazar:
+    build: ../..
+    depends_on:
+      crowdsec:
+        condition: service_healthy
+    volumes:
+      - ./config.yaml:/etc/nazar/config.yaml:ro
+      - ./secrets.env:/etc/nazar/secrets.env:ro
+      - ./check.py:/e2e/check.py:ro
+      - nazar-data:/var/lib/nazar
+    # Started on demand by run.sh (nazar run --once); keep the container alive.
+    entrypoint: ["sleep", "infinity"]
+
+volumes:
+  logs:
+  crowdsec-data:
+  ollama-models:
+  nazar-data:

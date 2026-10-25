@@ -118,6 +118,11 @@ On push/PR: matrix Python 3.11, 3.12 → `pip install -e .[dev]` → `ruff check
 
 ## End-to-end (M4, DESIGN §10)
 
-`deploy/e2e/docker-compose.yml`: CrowdSec, Ollama (with the model volume), Nazar; a replay script
-feeds sample SSH/HTTP attack logs; assertions check verdicts, `cscli decisions list` and rollback.
-Not run in normal CI (model size); run manually or in a scheduled workflow.
+`deploy/e2e/`: `docker-compose.yml` (CrowdSec with the sshd/nginx collections and local API only,
+Ollama, Nazar built from the `Dockerfile`), `acquis.yaml`, a Nazar `config.yaml`, and `run.sh`,
+which registers the machine, pulls the model, replays SSH and HTTP attack logs (one with a
+prompt-injection user agent, one from an allow-listed range) and asserts properties that hold
+whatever the model answers: dry run changes nothing, every incident has a verdict, the
+allow-listed IP is never banned in active mode, rollback removes all Nazar decisions. `check.py`
+parses `cscli decisions list -o json`. Not run in normal CI (model size); run manually or in a
+scheduled workflow.
