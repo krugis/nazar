@@ -45,7 +45,11 @@ class LlmBackend(Protocol):
 
 - Answer: `response.message.content`. `response.message.thinking`, if present, is **discarded**:
   never parsed, never stored, never shown (reasoning text is not the answer).
-- `think` is optional because Ollama returns an error for models without thinking support.
+- `think`: configured value if set; otherwise **auto**: `false` when `POST /api/show` lists the
+  `thinking` capability (cached after the first successful lookup), omitted otherwise, because Ollama
+  rejects the option for models without thinking. Verified live: with the option omitted the
+  default model reasoned until the 2048-token limit (186 s, no answer); with `think: false` it
+  answered validly after 827 tokens (72 s at ~11 tokens/s on 2 vCPU).
 - `num_predict` covers the reasoning **and** the answer. Verified live with the default model
   (Ollama 0.40.11): it always reasons (~300 tokens) before a ~150-token JSON answer, even with
   `think: false`; at 512 the budget ran out and `content` was empty. Default is 2048.

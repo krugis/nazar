@@ -70,6 +70,9 @@ async def http() -> AsyncIterator[httpx.AsyncClient]:
 
 @respx.mock
 async def test_ollama_payload_and_thinking_ignored(http: httpx.AsyncClient) -> None:
+    respx.post(f"{OLLAMA}/api/show").mock(
+        return_value=httpx.Response(200, json={"capabilities": ["completion"]})
+    )
     route = respx.post(f"{OLLAMA}/api/chat").mock(
         return_value=httpx.Response(
             200,
@@ -153,3 +156,41 @@ async def test_ollama_truncation_is_logged(
         result = await OllamaBackend(AnalystConfig(), http).chat([], {})
     assert result.content == ""
     assert any(r.getMessage() == "model_output_truncated" for r in caplog.records)
+
+
+@respx.mock
+@pytest.mark.parametrize(
+    ("configured", "capabilities", "expected"),
+    [
+        (None, ["completion", "thinking"], False),  # auto: bound the reasoning
+        (None, ["completion"], "omitted"),  # auto: option would be rejected
+        (True, ["completion", "thinking"], True),  # explicit config wins
+        (False, ["completion"], False),
+    ],
+)
+async def test_think_auto(
+    http: httpx.AsyncClient, configured: bool | None, capabilities: list[str], expected: object
+) -> None:
+    show = respx.post(f"{OLLAMA}/api/show").mock(
+        return_value=httpx.Response(200, json={"capabilities": capabilities})
+    )
+    chat = respx.post(f"{OLLAMA}/api/chat").mock(
+        return_value=httpx.Response(200, json={"message": {"content": "{}"}})
+    )
+    backend = OllamaBackend(AnalystConfig(think=configured), http)
+    for _ in range(2):
+        await backend.chat([], {})
+    bodies = [json.loads(c.request.content) for c in chat.calls]
+    for body in bodies:
+        assert body.get("think", "omitted") == expected
+    assert show.call_count == (1 if configured is None else 0)  # looked up once, then cached
+
+
+@respx.mock
+async def test_think_auto_when_show_fails(http: httpx.AsyncClient) -> None:
+    respx.post(f"{OLLAMA}/api/show").mock(side_effect=httpx.ConnectError("down"))
+    chat = respx.post(f"{OLLAMA}/api/chat").mock(
+        return_value=httpx.Response(200, json={"message": {"content": "{}"}})
+    )
+    await OllamaBackend(AnalystConfig(), http).chat([], {})
+    assert "think" not in json.loads(chat.calls[0].request.content)

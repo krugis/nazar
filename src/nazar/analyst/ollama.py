@@ -27,8 +27,29 @@ class OllamaBackend:
         self.model = cfg.model
         self._cfg = cfg
         self._http = http
+        self._can_think: bool | None = None
 
-    def _payload(self, messages: list[dict[str, str]], schema: dict[str, Any]) -> dict[str, Any]:
+    async def _think_option(self) -> bool | None:
+        """The ``think`` value to send. Configured value wins; ``None`` means auto:
+        ``False`` for models that can reason (otherwise they may reason until the token
+        limit), omitted for models that cannot (Ollama rejects the option for them)."""
+        if self._cfg.think is not None:
+            return self._cfg.think
+        if self._can_think is None:
+            try:
+                resp = await self._http.post(
+                    "/api/show", json={"model": self._cfg.model}, timeout=10
+                )
+                caps = resp.json().get("capabilities") or [] if resp.status_code == 200 else []
+            except Exception as exc:  # detection must never break triage
+                log.debug("think_detection_failed", error=type(exc).__name__)
+                return None  # unknown: omit, and ask again next time
+            self._can_think = "thinking" in caps
+        return False if self._can_think else None
+
+    def _payload(
+        self, messages: list[dict[str, str]], schema: dict[str, Any], think: bool | None
+    ) -> dict[str, Any]:
         payload: dict[str, Any] = {
             "model": self._cfg.model,
             "messages": messages,
@@ -41,16 +62,17 @@ class OllamaBackend:
             },
             "keep_alive": self._cfg.keep_alive,
         }
-        if self._cfg.think is not None:
-            payload["think"] = self._cfg.think
+        if think is not None:
+            payload["think"] = think
         return payload
 
     async def chat(self, messages: list[dict[str, str]], schema: dict[str, Any]) -> ChatResult:
+        think = await self._think_option()
         start = time.monotonic()
         try:
             resp = await self._http.post(
                 "/api/chat",
-                json=self._payload(messages, schema),
+                json=self._payload(messages, schema, think),
                 timeout=self._cfg.timeout_seconds,
             )
         except httpx.TimeoutException as exc:

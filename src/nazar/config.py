@@ -95,6 +95,8 @@ class AnalystConfig(_Section):
     """Token budget for reasoning *and* answer: reasoning models think before the JSON."""
     max_queue: int = Field(default=200, ge=1)
     think: bool | None = None
+    """Ollama ``think`` option. ``None`` = auto: ``false`` for models with the thinking
+    capability (bounds their reasoning), omitted for models without it."""
     keep_alive: str = "30m"
 
     _keep_alive = field_validator("keep_alive")(_check_duration)

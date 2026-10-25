@@ -43,7 +43,7 @@ analyst:
   prompt_version: triage-v1             # must match prompts/triage.md
   num_ctx: 4096
   num_predict: 2048                     # tokens for reasoning + answer (reasoning models think first)
-  think: null                           # true/false only for models that support thinking
+  think: null                           # auto: false for reasoning models, omitted otherwise
   keep_alive: 30m
 
 policy:

@@ -32,7 +32,7 @@ Defaults equal DESIGN §6. Only additions beyond DESIGN are listed with a ★.
 | `crowdsec` | `lapi_url`, `machine_id`, `password_env`★, `cti_api_key_env`, `cti_url`★, `cti_cache_hours`★ (24), `timeout_seconds`★ (10), `decision_origin`★ (`cscli`, D6), `use_cscli_fallback`★ (false), `import_allowlists`★ (false) |
 | `collector` | `interval_seconds` (30, ≥5), `lookback`★ (`1h`, first poll window), `batch_limit`★ (500) |
 | `prefilter` | `dedupe_window_seconds` (300), `incident_window_minutes` (30), `max_sample_lines`★ (20), `max_line_length`★ (300) |
-| `analyst` | `ollama_url`, `model`, `timeout_seconds`, `temperature`, `max_calls_per_minute`, `prompt_version`, `num_ctx`★ (4096), `num_predict`★ (2048: reasoning and answer share it), `max_queue`★ (200), `think`★ (`null` = omit option), `keep_alive`★ (`30m`) |
+| `analyst` | `ollama_url`, `model`, `timeout_seconds`, `temperature`, `max_calls_per_minute`, `prompt_version`, `num_ctx`★ (4096), `num_predict`★ (2048: reasoning and answer share it), `max_queue`★ (200), `think`★ (`null` = auto: `false` for models with the `thinking` capability, else omitted), `keep_alive`★ (`30m`) |
 | `policy` | `auto_actions`, `auto_min_confidence`, `approval_min_confidence`, `max_ban_duration`, `max_auto_actions_per_hour`, `allowlist_cidrs`, `default_ban_duration`★ (`4h`), `host_addresses`★, `captcha_available`★ (false) |
 | `notifier` | `telegram.{enabled, bot_token_env, chat_id, allowed_user_ids★}`, `approval_ttl_minutes`, `daily_summary_time`, `timezone` |
 | `enrich`★ | `timeout_seconds` (5), `geoip_country_db`, `geoip_asn_db` (paths, optional) |
