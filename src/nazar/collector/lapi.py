@@ -78,6 +78,19 @@ class LapiClient:
         data = await self._call("DELETE", "/v1/decisions", params={"ip": ip, "scenario": scenario})
         return _nb_deleted(data)
 
+    async def get_allowlists(self) -> list[dict[str, Any]]:
+        """CrowdSec allow-lists with their items (watcher auth)."""
+        data = await self._call("GET", "/v1/allowlists", params={"with_content": "true"})
+        lists = [a for a in data if isinstance(a, dict)] if isinstance(data, list) else []
+        for i, entry in enumerate(lists):
+            if "items" not in entry and entry.get("name"):
+                one = await self._call(
+                    "GET", f"/v1/allowlists/{entry['name']}", params={"with_content": "true"}
+                )
+                if isinstance(one, dict):
+                    lists[i] = one
+        return lists
+
     async def health(self) -> bool:
         try:
             await self._ensure_token()

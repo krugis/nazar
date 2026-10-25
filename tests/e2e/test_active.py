@@ -125,3 +125,21 @@ async def test_budget_exhaustion_goes_to_approval(router: respx.MockRouter, make
     d = results["198.51.100.7"].decision
     assert d is not None and d.outcome is Outcome.APPROVAL and d.unusual_volume
     assert _pushed(router) == []
+
+
+async def test_crowdsec_allowlist_import(router: respx.MockRouter, make_app: Any) -> None:
+    router.get(f"{LAPI}/v1/allowlists").mock(
+        return_value=httpx.Response(
+            200, json=[{"name": "partners", "items": [{"value": "198.51.100.0/24"}]}]
+        )
+    )
+    cfg = Config(
+        mode=Mode.ACTIVE,
+        crowdsec=CrowdSecConfig(cti_api_key_env="NAZAR_CTI_KEY", import_allowlists=True),
+    )
+    app = make_app(cfg)
+    daemon = Daemon(app)
+    await daemon.refresh_allowlists()
+    assert app.allowlist.match("198.51.100.7") == "crowdsec"
+    await daemon.run_once()
+    assert _pushed(router) == []

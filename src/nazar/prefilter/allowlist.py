@@ -5,9 +5,12 @@ from __future__ import annotations
 import ipaddress
 import socket
 from collections.abc import Iterable
+from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from nazar.config import PolicyConfig
+from nazar.core.clock import from_iso
 from nazar.core.net import parse_ip
 
 IPNetwork = ipaddress.IPv4Network | ipaddress.IPv6Network
@@ -94,3 +97,40 @@ def build_allowlist(
     entries += [("config", _net(c)) for c in policy.allowlist_cidrs]
     entries += [("crowdsec", _net(c)) for c in crowdsec_cidrs]
     return AllowList(entries)
+
+
+def crowdsec_cidrs(allowlists: Iterable[dict[str, Any]], now: datetime) -> list[str]:
+    """Valid, unexpired IPs and ranges from LAPI ``GET /v1/allowlists`` items."""
+    found: list[str] = []
+    for allowlist in allowlists:
+        for item in allowlist.get("items") or []:
+            if not isinstance(item, dict):
+                continue
+            expiration = item.get("expiration")
+            if expiration:
+                try:
+                    if from_iso(str(expiration)) <= now:
+                        continue
+                except ValueError:
+                    pass
+            try:
+                found.append(str(_net(str(item.get("value", "")))))
+            except ValueError:
+                continue
+    return sorted(set(found))
+
+
+class RefreshableAllowList:
+    """An ``IpMatcher`` whose entries the daemon can replace at runtime (CrowdSec import)."""
+
+    def __init__(self, current: AllowList) -> None:
+        self._current = current
+
+    def match(self, ip: str) -> str | None:
+        return self._current.match(ip)
+
+    def replace(self, new: AllowList) -> None:
+        self._current = new
+
+    def __len__(self) -> int:
+        return len(self._current)

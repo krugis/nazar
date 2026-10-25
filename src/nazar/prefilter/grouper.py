@@ -11,8 +11,8 @@ from datetime import timedelta
 
 from nazar.config import PrefilterConfig
 from nazar.core.log import get_logger
+from nazar.core.net import IpMatcher
 from nazar.models import Actor, Event, Verdict
-from nazar.prefilter.allowlist import AllowList
 from nazar.store import IncidentRow, Store, VerdictRecord
 
 log = get_logger(__name__)
@@ -30,7 +30,7 @@ class IngestResult:
 
 
 class Grouper:
-    def __init__(self, store: Store, allowlist: AllowList, cfg: PrefilterConfig) -> None:
+    def __init__(self, store: Store, allowlist: IpMatcher, cfg: PrefilterConfig) -> None:
         self._store = store
         self._allowlist = allowlist
         self._cfg = cfg

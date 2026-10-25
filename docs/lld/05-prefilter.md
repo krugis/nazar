@@ -31,7 +31,11 @@ Always-protected networks (cannot be removed by config):
 | `host` | this host's addresses: `policy.host_addresses` + addresses from `socket.getaddrinfo(gethostname())` + interface addresses read from `/proc/net/fib_trie` (IPv4, `/32 host LOCAL` entries) and `/proc/net/if_inet6` (IPv6). No subprocesses. |
 
 Then `config` label for `policy.allowlist_cidrs`, and `crowdsec` label for CrowdSec allow-lists
-when `crowdsec.import_allowlists` is on (LAPI `GET /v1/allowlists`, auth to verify; refreshed hourly).
+when `crowdsec.import_allowlists` is on: LAPI `GET /v1/allowlists?with_content=true` (watcher JWT,
+per the swagger); lists returned without `items` are fetched by name. Expired and invalid items are
+skipped. The daemon refreshes at startup and hourly, swapping the entries of a
+`RefreshableAllowList` (an `IpMatcher` shared by grouper, pipeline, policy and actuator), so no
+service needs rebuilding.
 IPv4-mapped IPv6 addresses (`::ffff:a.b.c.d`) are unwrapped before matching.
 
 `AllowList` is immutable and has no I/O; `build_allowlist` gathers the inputs. The policy engine

@@ -57,3 +57,33 @@ def test_local_addresses_from_proc(tmp_path: Path) -> None:
     assert "203.0.113.7" in found
     assert "2001:db8::1" in found
     assert "203.0.113.255" not in found
+
+
+def test_crowdsec_cidrs_skip_expired_and_invalid() -> None:
+    from datetime import UTC, datetime
+
+    from nazar.prefilter import crowdsec_cidrs
+
+    lists = [
+        {"name": "office", "items": [
+            {"value": "192.0.2.10"},
+            {"value": "198.18.0.0/15", "expiration": "2099-01-01T00:00:00Z"},
+            {"value": "203.0.113.0/24", "expiration": "2020-01-01T00:00:00Z"},
+            {"value": "not an ip"},
+            "junk",
+        ]},
+        {"name": "empty"},
+    ]  # fmt: skip
+    now = datetime(2026, 10, 25, tzinfo=UTC)
+    assert crowdsec_cidrs(lists, now) == ["192.0.2.10/32", "198.18.0.0/15"]
+
+
+def test_refreshable_allowlist() -> None:
+    from nazar.prefilter import RefreshableAllowList
+
+    allow = RefreshableAllowList(build_allowlist(PolicyConfig(), host_addresses=[]))
+    assert allow.match("192.0.2.1") is None
+    allow.replace(
+        build_allowlist(PolicyConfig(), host_addresses=[], crowdsec_cidrs=["192.0.2.0/24"])
+    )
+    assert allow.match("192.0.2.1") == "crowdsec"

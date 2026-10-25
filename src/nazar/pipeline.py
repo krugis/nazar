@@ -11,10 +11,10 @@ from nazar.analyst import Analyst
 from nazar.config import Config
 from nazar.core.clock import Clock
 from nazar.core.log import get_logger
+from nazar.core.net import IpMatcher
 from nazar.enrich import Enricher
 from nazar.models import Actor, Decision, Incident, Outcome, Verdict
 from nazar.policy import PolicyInput, evaluate
-from nazar.prefilter import AllowList
 from nazar.store import EventRow, IncidentRow, Store, VerdictRecord
 
 log = get_logger(__name__)
@@ -61,7 +61,7 @@ class Pipeline:
         cfg: Config,
         store: Store,
         clock: Clock,
-        allowlist: AllowList,
+        allowlist: IpMatcher,
         enricher: Enricher,
         analyst: Analyst,
         actuator: Actuator | None = None,

@@ -113,3 +113,21 @@ async def test_push_get_delete(http: httpx.AsyncClient, clock: FrozenClock) -> N
     assert await lapi.delete_decisions(ip="203.0.113.45", scenario="nazar/ai-triage") == 2
     params = by_filter.calls[0].request.url.params
     assert params["ip"] == "203.0.113.45" and params["scenario"] == "nazar/ai-triage"
+
+
+@respx.mock
+async def test_get_allowlists_fetches_missing_items(
+    http: httpx.AsyncClient, clock: FrozenClock
+) -> None:
+    respx.post(f"{BASE}/v1/watchers/login").mock(return_value=_login())
+    listing = respx.get(f"{BASE}/v1/allowlists").mock(
+        return_value=httpx.Response(
+            200, json=[{"name": "a", "items": [{"value": "1.2.3.4"}]}, {"name": "b"}]
+        )
+    )
+    respx.get(f"{BASE}/v1/allowlists/b").mock(
+        return_value=httpx.Response(200, json={"name": "b", "items": [{"value": "5.6.7.8"}]})
+    )
+    lists = await LapiClient("nazar", "pw", http, clock).get_allowlists()
+    assert [x["items"][0]["value"] for x in lists] == ["1.2.3.4", "5.6.7.8"]
+    assert listing.calls[0].request.url.params["with_content"] == "true"

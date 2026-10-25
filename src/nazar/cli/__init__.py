@@ -8,7 +8,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from nazar import __version__
-from nazar.cli import run, setup
+from nazar.cli import actions, incidents, run, setup
 from nazar.cli._output import err
 from nazar.core.errors import ConfigError, NazarError
 
@@ -33,7 +33,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--log-format", choices=["json", "text"], help="default: text on a TTY")
     parser.add_argument("--json", action="store_true", help="machine-readable output")
     sub = parser.add_subparsers(dest="command", metavar="COMMAND", required=True)
-    for module in (run, setup):
+    for module in (run, setup, incidents, actions):
         module.register(sub)
     return parser
 

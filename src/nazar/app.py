@@ -28,7 +28,7 @@ from nazar.enrich import (
     HistoryProvider,
 )
 from nazar.pipeline import Pipeline
-from nazar.prefilter import AllowList, Grouper, TriageQueue, build_allowlist
+from nazar.prefilter import Grouper, RefreshableAllowList, TriageQueue, build_allowlist
 from nazar.store import Store
 
 USER_AGENT = f"nazar/{__version__}"
@@ -41,7 +41,7 @@ class App:
     store: Store
     lapi: LapiClient
     source: LapiAlertSource
-    allowlist: AllowList
+    allowlist: RefreshableAllowList
     grouper: Grouper
     queue: TriageQueue
     enricher: Enricher
@@ -49,6 +49,8 @@ class App:
     analyst: Analyst
     pipeline: Pipeline
     actuator: Actuator
+    host_addresses: list[str] | None = None
+    """Fixed host addresses (tests); None means discover them from the system."""
     _clients: tuple[httpx.AsyncClient, ...] = ()
 
     async def aclose(self) -> None:
@@ -92,7 +94,7 @@ def build_app(
     lapi = LapiClient(
         cfg.crowdsec.machine_id, secret(cfg.crowdsec.password_env) or "", lapi_http, clock
     )
-    allowlist = build_allowlist(cfg.policy, host_addresses=host_addresses)
+    allowlist = RefreshableAllowList(build_allowlist(cfg.policy, host_addresses=host_addresses))
 
     # Provider order is trust order: the first non-null value of a field wins (LLD 06).
     providers: list[EnrichmentProvider] = [AlertGeoProvider()]
@@ -130,5 +132,6 @@ def build_app(
         analyst=analyst,
         pipeline=Pipeline(cfg, store, clock, allowlist, enricher, analyst, actuator),
         actuator=actuator,
+        host_addresses=host_addresses,
         _clients=tuple(owned),
     )

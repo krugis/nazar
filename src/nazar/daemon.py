@@ -15,6 +15,7 @@ from nazar.core.errors import LapiError
 from nazar.core.log import get_logger
 from nazar.models import Actor
 from nazar.pipeline import PipelineResult, report_line
+from nazar.prefilter import build_allowlist, crowdsec_cidrs
 from nazar.store import IncidentRow
 
 log = get_logger(__name__)
@@ -23,6 +24,8 @@ MAX_PIPELINE_FAILURES = 3
 HOUSEKEEPING_SECONDS = 60
 RETENTION_EVERY = timedelta(hours=24)
 HEALTH_KEY = "health"
+ALLOWLIST_REFRESH_KEY = "allowlist.last_refresh"
+ALLOWLIST_EVERY = timedelta(hours=1)
 
 Reporter = Callable[[str], None]
 
@@ -57,6 +60,7 @@ class Daemon:
             except LapiError as exc:
                 log.warning("reconcile_failed", error=str(exc))
         self.restore_queue()
+        await self.refresh_allowlists()
         await self.health_check()
         tasks = [
             asyncio.create_task(self._supervise("collect", self._collect_loop)),
@@ -130,6 +134,23 @@ class Daemon:
         if result is not None and self._report and app.cfg.dry_run:
             self._report(report_line(result))
         return result
+
+    async def refresh_allowlists(self) -> None:
+        """Import CrowdSec allow-lists into Nazar's allow-list (``crowdsec.import_allowlists``)."""
+        app = self.app
+        if not app.cfg.crowdsec.import_allowlists:
+            return
+        try:
+            lists = await app.lapi.get_allowlists()
+        except LapiError as exc:
+            log.warning("allowlist_import_failed", error=str(exc))
+            return
+        cidrs = crowdsec_cidrs(lists, app.clock.now())
+        app.allowlist.replace(
+            build_allowlist(app.cfg.policy, host_addresses=app.host_addresses, crowdsec_cidrs=cidrs)
+        )
+        app.store.kv.set(ALLOWLIST_REFRESH_KEY, to_iso(app.clock.now()))
+        log.info("allowlist_imported", lists=len(lists), entries=len(cidrs))
 
     async def health_check(self) -> dict[str, object]:
         app = self.app
@@ -207,6 +228,9 @@ class Daemon:
                 )
                 log.info("approval_expired", approval_id=approval.approval_id)
             await self.health_check()
+            refreshed = app.store.kv.get(ALLOWLIST_REFRESH_KEY)
+            if refreshed is None or refreshed < to_iso(app.clock.now() - ALLOWLIST_EVERY):
+                await self.refresh_allowlists()
             last = app.store.kv.get("retention.last_run")
             if last is None or last < to_iso(app.clock.now() - RETENTION_EVERY):
                 removed = app.store.purge(
