@@ -111,7 +111,7 @@ class AppliedDecision(BaseModel):   # a CrowdSec decision Nazar created (09)
     rolled_back_at: datetime | None
 
 class Approval(BaseModel):          # pending human decision (10, 12)
-    approval_id: str                # random URL-safe token, 11 chars
+    approval_id: str                # 11 random letters/digits (never starts with '-')
     decision_id: int
     incident_id: str
     created_at: datetime

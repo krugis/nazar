@@ -143,3 +143,11 @@ def test_purge_keeps_active_bans(store: Store, clock: FrozenClock) -> None:
     assert removed == 1
     assert store.incidents.get(old_id) is None
     assert store.incidents.get(keep.id) is not None
+
+
+def test_approval_ids_are_cli_safe() -> None:
+    from nazar.store.triage import new_approval_id
+
+    ids = {new_approval_id() for _ in range(2000)}
+    assert len(ids) == 2000
+    assert all(len(i) == 11 and i.isalnum() for i in ids)

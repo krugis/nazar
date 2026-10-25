@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import secrets
 import sqlite3
+import string
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any
@@ -263,6 +264,15 @@ class DecisionRepo:
         return [DecisionRow.from_row(r) for r in rows]
 
 
+_ID_ALPHABET = string.ascii_letters + string.digits
+
+
+def new_approval_id(length: int = 11) -> str:
+    """Random letters and digits (about 65 bits). Never starts with ``-``, so it is always a
+    plain CLI argument (``nazar approve <id>``)."""
+    return "".join(secrets.choice(_ID_ALPHABET) for _ in range(length))
+
+
 _APPROVAL_SELECT = (
     "SELECT a.*, d.incident_id FROM approvals a JOIN decisions d ON d.id = a.decision_id"
 )
@@ -286,7 +296,7 @@ class ApprovalRepo:
         self._clock = clock
 
     def create(self, decision_id: int, ttl: timedelta) -> Approval:
-        approval_id = secrets.token_urlsafe(8)
+        approval_id = new_approval_id()
         now = self._clock.now()
         self._db.execute(
             "INSERT INTO approvals (id, decision_id, created_at, expires_at, status)"
