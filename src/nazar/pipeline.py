@@ -6,14 +6,16 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import timedelta
 
-from nazar.actuator import Actuator, ApplyResult
+from nazar.actuator import Actuator, ApplyResult, ApplyStatus
 from nazar.analyst import Analyst
+from nazar.approvals import ApprovalService
 from nazar.config import Config
 from nazar.core.clock import Clock
 from nazar.core.log import get_logger
 from nazar.core.net import IpMatcher
 from nazar.enrich import Enricher
-from nazar.models import Actor, Decision, Incident, Outcome, Verdict
+from nazar.models import Action, Actor, Decision, Incident, Outcome, Severity, Verdict
+from nazar.notify import AutoActionNote, FanoutNotifier, IncidentNote
 from nazar.policy import PolicyInput, evaluate
 from nazar.store import EventRow, IncidentRow, Store, VerdictRecord
 
@@ -65,8 +67,12 @@ class Pipeline:
         enricher: Enricher,
         analyst: Analyst,
         actuator: Actuator | None = None,
+        approvals: ApprovalService | None = None,
+        notifier: FanoutNotifier | None = None,
     ) -> None:
         self._actuator = actuator
+        self._approvals = approvals
+        self._notifier = notifier
         self._cfg = cfg
         self._store = store
         self._clock = clock
@@ -103,7 +109,9 @@ class Pipeline:
             latency_ms=triage.latency_ms,
         )
         decision, decision_id = self._decide_and_store(incident, record, label)
-        applied, approval_id = await self._carry_out(incident, decision, decision_id)
+        applied, approval_id = await self._carry_out(
+            incident, triage.verdict, decision, decision_id
+        )
         return PipelineResult(
             incident,
             triage.verdict,
@@ -115,32 +123,53 @@ class Pipeline:
         )
 
     async def _carry_out(
-        self, incident: Incident, decision: Decision, decision_id: int
+        self, incident: Incident, verdict: Verdict, decision: Decision, decision_id: int
     ) -> tuple[ApplyResult | None, str | None]:
         """Act on the policy outcome. Only ``auto`` enforcing decisions touch CrowdSec."""
         if decision.outcome is Outcome.AUTO and decision.action.enforces:
             if self._actuator is None:
                 log.error("no_actuator_configured", decision_id=decision_id)
                 return None, None
-            return await self._actuator.apply(decision_id), None
-        if decision.outcome is Outcome.APPROVAL:
-            ttl = timedelta(minutes=self._cfg.notifier.approval_ttl_minutes)
-            approval = self._store.approvals.create(decision_id, ttl)
-            self._store.audit.append(
-                Actor.POLICY,
-                "approval",
-                {"status": "pending", "expires_at": approval.expires_at.isoformat()},
-                incident_id=incident.incident_id,
-                ref_id=approval.approval_id,
+            applied = await self._actuator.apply(decision_id)
+            if applied.status is ApplyStatus.APPLIED:
+                await self._notify(
+                    AutoActionNote(
+                        incident_id=incident.incident_id,
+                        ip=incident.source_ip,
+                        scenarios=incident.scenarios,
+                        action=decision.action.value,
+                        duration=decision.duration,
+                        summary=verdict.summary,
+                        decision_id=applied.decision_id,
+                        rollback_expires=self._clock.now() + self._cfg.policy.max_ban,
+                    )
+                )
+            return applied, None
+        if decision.outcome is Outcome.APPROVAL and self._approvals is not None:
+            approval_id = await self._approvals.request(incident, verdict, decision, decision_id)
+            return None, approval_id
+        notify = decision.action is Action.NOTIFY and decision.outcome is Outcome.AUTO
+        serious = (
+            decision.outcome is Outcome.REPORT_ONLY and verdict.severity.rank >= Severity.HIGH.rank
+        )
+        if notify or serious:
+            await self._notify(
+                IncidentNote(
+                    incident_id=incident.incident_id,
+                    ip=incident.source_ip,
+                    scenarios=incident.scenarios,
+                    verdict=verdict.verdict.value,
+                    severity=verdict.severity.value,
+                    confidence=verdict.confidence,
+                    summary=verdict.summary,
+                    outcome=decision.intended_outcome.value,
+                )
             )
-            log.info(
-                "approval_requested",
-                incident_id=incident.incident_id,
-                approval_id=approval.approval_id,
-                action=decision.action.value,
-            )
-            return None, approval.approval_id
         return None, None
+
+    async def _notify(self, note: AutoActionNote | IncidentNote) -> None:
+        if self._notifier is not None:
+            await self._notifier.send(note)
 
     def _decide_and_store(
         self, incident: Incident, record: VerdictRecord, allowlist_match: str | None

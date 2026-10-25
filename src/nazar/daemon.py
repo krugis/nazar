@@ -7,13 +7,14 @@ import contextlib
 import signal
 from collections.abc import Awaitable, Callable
 from datetime import timedelta
+from zoneinfo import ZoneInfo
 
 from nazar import __version__
 from nazar.app import App
 from nazar.core.clock import to_iso
-from nazar.core.errors import LapiError
+from nazar.core.errors import LapiError, NotifierError
 from nazar.core.log import get_logger
-from nazar.models import Actor
+from nazar.notify import TextNote, build_summary, render_summary
 from nazar.pipeline import PipelineResult, report_line
 from nazar.prefilter import build_allowlist, crowdsec_cidrs
 from nazar.store import IncidentRow
@@ -24,6 +25,7 @@ MAX_PIPELINE_FAILURES = 3
 HOUSEKEEPING_SECONDS = 60
 RETENTION_EVERY = timedelta(hours=24)
 HEALTH_KEY = "health"
+SUMMARY_KEY = "summary.last_sent"
 ALLOWLIST_REFRESH_KEY = "allowlist.last_refresh"
 ALLOWLIST_EVERY = timedelta(hours=1)
 
@@ -66,6 +68,8 @@ class Daemon:
             asyncio.create_task(self._supervise("collect", self._collect_loop)),
             asyncio.create_task(self._supervise("housekeeping", self._housekeeping_loop)),
         ]
+        if self.app.telegram is not None:
+            tasks.append(asyncio.create_task(self._supervise("telegram", self._telegram_loop)))
         triage = asyncio.create_task(self._supervise("triage", self._triage_loop))
         await self._stop.wait()
         log.info("nazar_stopping")
@@ -131,6 +135,10 @@ class Daemon:
             if failures >= MAX_PIPELINE_FAILURES:
                 app.pipeline.record_skipped([incident_id], "pipeline_failed")
             return None
+        if result is not None and result.decision is not None and result.decision.unusual_volume:
+            await app.health.update(
+                "volume", "warning", "automatic action budget reached; actions need approval"
+            )
         if result is not None and self._report and app.cfg.dry_run:
             self._report(report_line(result))
         return result
@@ -167,15 +175,50 @@ class Daemon:
             "mode": app.cfg.mode.value,
         }
         app.store.kv.set(HEALTH_KEY, snapshot)
-        if not lapi_ok:
-            log.warning("health_lapi_down")
-        if not backend.reachable:
-            log.warning("health_ollama_down")
-        elif not backend.model_present:
-            log.warning("health_model_missing", model=app.cfg.analyst.model)
-        if app.analyst.output_unhealthy:
-            log.warning("health_model_output_invalid", consecutive=app.analyst.consecutive_invalid)
+        health = app.health
+        await health.update("lapi", "up" if lapi_ok else "down", app.cfg.crowdsec.lapi_url)
+        await health.update("ollama", "up" if backend.reachable else "down", backend.detail or "")
+        if backend.reachable:
+            await health.update(
+                "model",
+                "up" if backend.model_present else "down",
+                "" if backend.model_present else f"{app.cfg.analyst.model} is not pulled",
+            )
+        await health.update(
+            "model_output",
+            "warning" if app.analyst.output_unhealthy else "up",
+            f"{app.analyst.consecutive_invalid} invalid answers in a row",
+        )
+        if app.cti is not None:
+            await health.update(
+                "cti", "warning" if app.cti.key_rejected else "up", "CTI API key rejected"
+            )
+        since = app.clock.now() - timedelta(hours=1)
+        if (
+            app.store.decisions.count_auto_enforced(since)
+            < app.cfg.policy.max_auto_actions_per_hour
+        ):
+            await health.update("volume", "up")
         return snapshot
+
+    async def daily_summary_if_due(self) -> bool:
+        app = self.app
+        tz = ZoneInfo(app.cfg.notifier.timezone)
+        local = app.clock.now().astimezone(tz)
+        today = local.date().isoformat()
+        last = app.store.kv.get(SUMMARY_KEY)
+        due = local.strftime("%H:%M") >= app.cfg.notifier.daily_summary_time
+        if last is None and due:
+            # First start after today's summary time: begin tomorrow, not right away.
+            app.store.kv.set(SUMMARY_KEY, today)
+            return False
+        if not due or last == today:
+            return False
+        now = app.clock.now()
+        text = render_summary(build_summary(app.store, now - timedelta(hours=24), now))
+        await app.notifier.send(TextNote(kind="daily_summary", title="Daily summary", text=text))
+        app.store.kv.set(SUMMARY_KEY, today)
+        return True
 
     # ------------------------------------------------------------------ internals
 
@@ -186,6 +229,24 @@ class Daemon:
         if evicted:
             self.app.pipeline.record_skipped(evicted, "rate_limited_bulk")
             log.warning("triage_queue_overflow", summarized=len(evicted))
+
+    async def _telegram_loop(self) -> None:
+        app = self.app
+        assert app.telegram is not None
+        failures = 0
+        while not self._stop.is_set():
+            try:
+                actions = await app.telegram.poll_actions()
+            except NotifierError as exc:
+                failures += 1
+                await app.health.update("telegram", "down", str(exc))
+                await self._sleep(min(5 * 2 ** (failures - 1), 300))
+                continue
+            if failures:
+                failures = 0
+                await app.health.update("telegram", "up")
+            for action in actions:
+                await app.approvals.handle(action)
 
     async def _collect_loop(self) -> None:
         interval = self.app.cfg.collector.interval_seconds
@@ -218,15 +279,8 @@ class Daemon:
         while not self._stop.is_set():
             window = timedelta(minutes=app.cfg.prefilter.incident_window_minutes)
             app.store.incidents.close_stale(app.clock.now() - window)
-            for approval in app.store.approvals.expire_due():
-                app.store.audit.append(
-                    Actor.SYSTEM,
-                    "approval",
-                    {"status": "expired"},
-                    incident_id=approval.incident_id,
-                    ref_id=approval.approval_id,
-                )
-                log.info("approval_expired", approval_id=approval.approval_id)
+            await app.approvals.expire_due()
+            await self.daily_summary_if_due()
             await self.health_check()
             refreshed = app.store.kv.get(ALLOWLIST_REFRESH_KEY)
             if refreshed is None or refreshed < to_iso(app.clock.now() - ALLOWLIST_EVERY):

@@ -57,14 +57,14 @@ Design: [DESIGN.md](DESIGN.md) (what/why) · [docs/lld/](docs/lld/README.md) (ho
 
 | ID | Item | LLD | Status |
 |---|---|---|---|
-| H-1 | Notification types, plain-text rendering, fan-out, log notifier | [10](docs/lld/10-notify.md) | todo |
-| H-2 | ApprovalService (request, approve with policy re-check, reject, expire) | [10](docs/lld/10-notify.md#approvalservice) | todo |
-| H-3 | Callback signing/verification | [10](docs/lld/10-notify.md#callback-security) | todo |
-| H-4 | Telegram notifier: send, edit, long polling, buttons | [10](docs/lld/10-notify.md#telegram) | todo |
-| H-5 | Health monitor + health notifications | [11](docs/lld/11-daemon.md#health) | todo |
-| H-6 | Daily summary + `report [--daily] [--send]` | [10](docs/lld/10-notify.md#daily-summary) | todo |
-| H-7 | CLI `approve` / `reject` | [12](docs/lld/12-cli.md) | todo |
-| H-8 | M3 acceptance: expiry safe, forged callback rejected, click re-validated | DESIGN §9 | todo |
+| H-1 | Notification types, plain-text rendering, fan-out, log notifier | [10](docs/lld/10-notify.md) | done |
+| H-2 | ApprovalService (request, approve with policy re-check, reject, expire) | [10](docs/lld/10-notify.md#approvalservice) | done |
+| H-3 | Callback signing/verification | [10](docs/lld/10-notify.md#callback-security) | done |
+| H-4 | Telegram notifier: send, edit, long polling, buttons | [10](docs/lld/10-notify.md#telegram) | done |
+| H-5 | Health monitor + health notifications | [11](docs/lld/11-daemon.md#health) | done |
+| H-6 | Daily summary + `report [--daily] [--send]` | [10](docs/lld/10-notify.md#daily-summary) | done |
+| H-7 | CLI `approve` / `reject` | [12](docs/lld/12-cli.md) | done |
+| H-8 | M3 acceptance: expiry safe, forged callback rejected, click re-validated | DESIGN §9 | done |
 
 ## M4: Packaging and hardening (v0.4)
 

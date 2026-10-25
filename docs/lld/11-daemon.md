@@ -38,23 +38,27 @@ incident keeps `needs_triage = 1` with a retry counter (`kv`), dropped to a `unk
 
 ## Daemon tasks (`nazar.daemon.Daemon.run()`)
 
-One asyncio event loop, these tasks under a `TaskGroup` with per-task supervision (an exception
-restarts that task after backoff; it never stops the daemon):
+One asyncio event loop. Each task runs under a supervisor: an unexpected exception restarts that
+task after backoff (5 s doubling to 5 min) and never stops the daemon:
 
 | Task | Period | Work |
 |---|---|---|
 | `collect` | `collector.interval_seconds` | `poll` → `Grouper.ingest` (one transaction with cursor) → enqueue incidents needing triage |
 | `triage` | continuous | `await queue.next()` (rate limited) → `Pipeline.process` |
-| `telegram` | long poll | `poll_actions` → `ApprovalService` / `Actuator.rollback` (only if Telegram enabled) |
-| `housekeeping` | 60 s | expire approvals, close stale incidents, daily summary when due, health checks |
-| `retention` | 24 h | `Store.purge` |
+| `telegram` | long poll | `poll_actions` → `ApprovalService.handle` (only if Telegram enabled) |
+| `housekeeping` | 60 s | close stale incidents, expire approvals, daily summary when due, health checks, CrowdSec allow-list refresh (hourly) |
+| (in housekeeping) | 24 h | `Store.purge` retention |
 
 ### Health
 
-`HealthMonitor` keeps the last state of `lapi`, `ollama`, `model`, `model_output`, `cti`, `telegram`
-and sends a `health` notification only on state **changes** (down → up is reported too), with a
-15-minute repeat while down. Also exposed by `nazar status` through `kv["health"]` (JSON snapshot
-written every minute).
+`HealthMonitor` keeps the last state of `lapi`, `ollama`, `model`, `model_output`, `cti`, `telegram`,
+`volume` and sends a `health` notification only on state **changes** (down → up is reported too;
+a healthy first observation is silent), with a 15-minute repeat while down or warning. The state
+is also exposed by `nazar status` through `kv["health"]` (JSON snapshot written every minute).
+
+The daily summary is due once the local time (`notifier.timezone`) passes
+`daily_summary_time`; `kv["summary.last_sent"]` holds the local date. On the very first start after
+that time the summary waits for the next day instead of firing immediately.
 
 ### Startup
 

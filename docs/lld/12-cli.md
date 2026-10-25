@@ -11,6 +11,7 @@ cli/
 ├── _output.py       # table / JSON printing
 ├── run.py           # run
 ├── setup.py         # init, config check, status, test-model
+├── _store.py        # open the store for read-only commands
 ├── incidents.py     # incidents, explain, report
 └── actions.py       # approve, reject, rollback
 ```
@@ -35,7 +36,7 @@ Exit codes: `0` ok, `1` runtime error / check failed, `2` config error, `3` refu
 | `nazar explain <incident_id>` | Full trail: events with sample lines, enrichment, model input, verdict (+ model, prompt version, attempts, latency), every policy reason and warning, actions, approvals, rollbacks, audit entries. |
 | `nazar approve <approval_id>` / `nazar reject <approval_id>` | Through `ApprovalService` with actor `user:cli:<login user>`. Approve re-runs the policy; refused → exit 3 with reasons. |
 | `nazar rollback (--incident ID \| --since DUR \| --decision ID) [--yes]` | Lists what will be removed, asks for confirmation unless `--yes`, then `Actuator.rollback`. |
-| `nazar report [--daily] [--send]` | Print the summary for the last 24 h; `--send` also sends it through the notifiers. |
+| `nazar report [--daily \| --since DUR] [--send]` | Print the summary (default last 24 h); `--send` also sends it through the notifiers. |
 | `nazar test-model [--file PATH] [--limit N]` | Run eval incidents through the analyst (no policy, no actions) and print metrics (07). |
 | `nazar config check` | Schema validation + `check_config` warnings. Exit 2 on errors, 1 on warnings with `--strict`. |
 

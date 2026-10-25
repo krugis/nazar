@@ -1,15 +1,19 @@
-"""``nazar incidents`` and ``nazar explain``."""
+"""``nazar incidents``, ``nazar explain``, ``nazar report``."""
 
 from __future__ import annotations
 
 import argparse
+import asyncio
 from typing import Any
 
+from nazar.app import build_app
 from nazar.cli import _context
 from nazar.cli._output import err, print_json, print_table
 from nazar.cli._store import open_store
+from nazar.config import Config
 from nazar.core.clock import SystemClock, to_iso
 from nazar.models import parse_duration
+from nazar.notify import TextNote, build_summary, render_summary
 from nazar.store import Store
 
 
@@ -19,6 +23,12 @@ def register(sub: Any) -> None:
     p.add_argument("--ip", help="only this source IP")
     p.add_argument("--limit", type=int, default=50)
     p.set_defaults(handler=cmd_incidents)
+
+    r = sub.add_parser("report", help="print (and optionally send) the summary")
+    r.add_argument("--daily", action="store_true", help="the last 24 hours (default)")
+    r.add_argument("--since", default="24h", help="look-back window, e.g. 24h, 7d")
+    r.add_argument("--send", action="store_true", help="also send it through the notifiers")
+    r.set_defaults(handler=cmd_report)
 
     e = sub.add_parser("explain", help="full reasoning trail of one incident")
     e.add_argument("incident_id")
@@ -214,3 +224,29 @@ def cmd_explain(args: argparse.Namespace) -> int:
     else:
         _print_explain(data)
     return 0
+
+
+def cmd_report(args: argparse.Namespace) -> int:
+    cfg = _context.load(args)
+    now = SystemClock().now()
+    window = parse_duration("24h" if args.daily else args.since)
+    store = open_store(cfg)
+    try:
+        summary = build_summary(store, now - window, now)
+    finally:
+        store.close()
+    if args.json:
+        print_json(summary)
+    else:
+        print(render_summary(summary))
+    if args.send:
+        asyncio.run(_send(cfg, render_summary(summary)))
+    return 0
+
+
+async def _send(cfg: Config, text: str) -> None:
+    app = build_app(cfg)
+    try:
+        await app.notifier.send(TextNote(kind="daily_summary", title="Summary", text=text))
+    finally:
+        await app.aclose()

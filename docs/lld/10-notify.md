@@ -6,13 +6,14 @@ Tells the operator what happened and collects approvals (DESIGN §3.7).
 
 | File | Contents |
 |---|---|
-| `messages.py` | `Notification` types and plain-text rendering |
-| `base.py` | `Notifier` and `InteractiveNotifier` protocols, `FanoutNotifier` |
+| `messages.py` | notification types (`Note`), plain-text `render`, `buttons` |
+| `base.py` | `Notifier` and `InteractiveNotifier` protocols, `UserAction`, `FanoutNotifier` |
 | `log_notifier.py` | writes notifications to the log (always on) |
 | `telegram.py` | `TelegramNotifier` (Bot API over `httpx`, long polling) |
 | `callbacks.py` | signing and verification of button data |
-| `approvals.py` | `ApprovalService`: create, resolve, expire (shared by Telegram and CLI) |
-| `summary.py` | daily summary builder (pure, from store queries) |
+| `health.py` | `HealthMonitor`: notify on state changes, repeat every 15 min while down |
+| `summary.py` | daily summary builder (from store queries) and renderer |
+| `nazar/approvals.py` | `ApprovalService` (top level, next to `pipeline.py`: it wires policy, actuator and notifier, which stage packages may not import) |
 
 ## Interfaces
 
@@ -25,15 +26,15 @@ class InteractiveNotifier(Notifier, Protocol):
     async def mark_resolved(self, message_ref: str, text: str) -> None
 ```
 
-`Notification` is a tagged union (pydantic, `kind` field):
+`Note` is a union of pydantic models, each with a `kind`:
 
-| kind | Fields | Buttons |
+| Model (`kind`) | Sent when | Buttons |
 |---|---|---|
-| `auto_action` | incident, decision, verdict summary, decision_id | Rollback |
-| `approval` | incident, decision, verdict summary, approval_id, expires_at | Approve, Reject |
-| `report` | dry-run cycle report or bulk-summary line | — |
-| `daily_summary` | counts and top incidents | — |
-| `health` | component (`lapi`, `ollama`, `model_output`, `cti`, `volume`), state, detail | — |
+| `AutoActionNote` (`auto_action`) | an automatic ban/captcha was applied | Rollback (valid for `max_ban_duration`) |
+| `ApprovalNote` (`approval`) | the policy asks for approval | Approve, Reject (valid until the approval expires) |
+| `IncidentNote` (`incident`) | an auto `notify` action, or a `report_only` incident with severity ≥ high | — |
+| `TextNote` (`daily_summary`, `report`) | daily summary, `nazar report --send` | — |
+| `HealthNote` (`health`) | component (`lapi`, `ollama`, `model`, `model_output`, `cti`, `telegram`, `volume`) changes state | — |
 
 Rendering is plain text with fixed templates (no Markdown/HTML parse mode), so untrusted text
 (summaries come from the model, which read attacker data) cannot inject formatting or links.
@@ -69,13 +70,21 @@ audit-logged (`callback_rejected`, reason):
 ## ApprovalService
 
 ```python
-async def request(self, decision_id: int) -> Approval           # creates row + sends message
+async def request(self, incident, verdict, decision, decision_id) -> str  # row + message
 async def approve(self, approval_id: str, by: str) -> ApprovalResult
 async def reject(self, approval_id: str, by: str) -> ApprovalResult
-async def expire_due(self) -> int                               # called every minute (11)
+async def expire_due(self) -> int                                         # every minute (11)
+async def handle(self, action: UserAction) -> None                        # verified clicks
 ```
 
-`resolve` is atomic and single-shot (03). Expired means no action; the message is edited to say so.
+`approve` re-runs the policy engine with `approved_by` (R10) on the incident snapshot stored with
+the verdict, refreshed with the current CrowdSec ban state, the current allow-list and mode.
+Only an `auto` enforcing result is applied, as a **new decision row** (its reasons include the R10
+line) through the actuator. Any other result resolves the approval as rejected by
+`policy:<user>` and returns `refused` with the policy's reasons (CLI exit code 3).
+Outcomes: `approved`, `rejected`, `refused`, `expired`, `not_pending` (replay or race),
+`not_found`. `resolve` is atomic and single-shot (03). Expired means no action; the message is
+edited to say so.
 
 ## Daily summary
 
