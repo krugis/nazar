@@ -26,9 +26,9 @@ Design: [DESIGN.md](DESIGN.md) (what/why) · [docs/lld/](docs/lld/README.md) (ho
 | F-6 | Store: DB, migrations, repositories, audit log, retention | [03](docs/lld/03-store.md) | done | |
 | F-7 | LAPI client: login, token refresh, 401 retry, alerts, errors | [04](docs/lld/04-collector.md) | done | |
 | F-8 | Alert normalization + polling source with cursor | [04](docs/lld/04-collector.md) | done | |
-| F-9 | Allow-list (protected ranges, host addresses, config CIDRs) | [05](docs/lld/05-prefilter.md) | todo | |
-| F-10 | Grouper: dedupe, incidents, needs-triage, skip-trivial | [05](docs/lld/05-prefilter.md) | todo | |
-| F-11 | Triage queue: priority, token bucket, overflow bulk summary | [05](docs/lld/05-prefilter.md) | todo | |
+| F-9 | Allow-list (protected ranges, host addresses, config CIDRs) | [05](docs/lld/05-prefilter.md) | done | CrowdSec allow-list import (`import_allowlists`) moved to P-10 |
+| F-10 | Grouper: dedupe, incidents, needs-triage, skip-trivial | [05](docs/lld/05-prefilter.md) | done | skip-trivial check runs in the pipeline (F-16) |
+| F-11 | Triage queue: priority, token bucket, overflow bulk summary | [05](docs/lld/05-prefilter.md) | done | evicted IDs are recorded by the daemon (F-16) |
 | F-12 | Enricher framework + alert_geo + history providers | [06](docs/lld/06-enrich.md) | todo | CTI in M2 |
 | F-13 | Prompt `prompts/triage.md` (triage-v1) + prompt builder + escaping | [07](docs/lld/07-analyst.md) | todo | |
 | F-14 | Verdict parser (`<think>` stripping, fences, JSON scan) | [07](docs/lld/07-analyst.md) | todo | |
@@ -51,6 +51,7 @@ Design: [DESIGN.md](DESIGN.md) (what/why) · [docs/lld/](docs/lld/README.md) (ho
 | P-7 | `active` mode wired in the pipeline | [11](docs/lld/11-daemon.md) | todo | |
 | P-8 | CLI: `incidents`, `explain`, `rollback` | [12](docs/lld/12-cli.md) | todo | |
 | P-9 | M2 acceptance: allow-listed never banned (tests), decisions visible in `cscli decisions list`, removable by rollback | DESIGN §9 | todo | live part needs the test VM; verify payload fields and custom origin |
+| P-10 | Import CrowdSec allow-lists (`crowdsec.import_allowlists`, LAPI `GET /v1/allowlists`, hourly refresh) | [05](docs/lld/05-prefilter.md#allowlist) | todo | verify auth for that endpoint |
 
 ## M3: Human in the loop (v0.3)
 
