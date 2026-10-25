@@ -1,23 +1,35 @@
-"""``nazar config check``, ``nazar status``, ``nazar test-model``."""
+"""``nazar init``, ``nazar config check``, ``nazar status``, ``nazar test-model``."""
 
 from __future__ import annotations
 
 import argparse
 import asyncio
+import os
 from pathlib import Path
 from typing import Any
 
+from nazar import bootstrap
 from nazar.analyst import PromptTemplate
 from nazar.analyst.evaluate import load_cases, run_eval
 from nazar.app import build_app
 from nazar.cli import _context
 from nazar.cli._output import err, print_json, print_table
 from nazar.collector.source import CURSOR_KEY, LAST_POLL_KEY
-from nazar.config import Config, Issue, check_config
+from nazar.config import Config, Issue, check_config, load_config
 from nazar.daemon import HEALTH_KEY
 
 
 def register(sub: Any) -> None:
+    init = sub.add_parser("init", help="create config and secrets, register with CrowdSec")
+    init.add_argument("--machine-id", default="nazar", help="CrowdSec machine name")
+    init.add_argument("--skip-register", action="store_true", help="do not call cscli")
+    init.add_argument(
+        "--force-register", action="store_true", help="reset an existing machine's password"
+    )
+    init.add_argument("--skip-checks", action="store_true", help="skip Ollama and self-test")
+    init.add_argument("--root", type=Path, default=Path("/"), help=argparse.SUPPRESS)
+    init.set_defaults(handler=cmd_init)
+
     config = sub.add_parser("config", help="configuration commands")
     config_sub = config.add_subparsers(dest="config_command", metavar="COMMAND", required=True)
     check = config_sub.add_parser("check", help="validate the configuration file")
@@ -141,3 +153,62 @@ async def _test_model(cfg: Config, args: argparse.Namespace) -> int:
             for f in report.failures:
                 print(f"  {f['id']}: expected {f['expected']} got {f['got']}")
     return 0
+
+
+def cmd_init(args: argparse.Namespace) -> int:
+    paths = bootstrap.Paths(args.root)
+    if args.root == Path("/") and os.geteuid() != 0:
+        err("error: nazar init must run as root (it writes /etc/nazar and calls cscli)")
+        return 1
+    report = bootstrap.init(
+        paths,
+        machine_id=args.machine_id,
+        register=not args.skip_register,
+        force_register=args.force_register,
+    )
+    bootstrap.apply_secrets_to_env(paths)
+    cfg = load_config(paths.config)
+    if args.root != Path("/"):
+        cfg = cfg.model_copy(
+            update={"store": cfg.store.model_copy(update={"path": paths.state / "nazar.db"})}
+        )
+    for issue in _issues(cfg):
+        report.add("config check", issue.level, issue.message)
+    if not args.skip_checks:
+        asyncio.run(_init_checks(cfg, report))
+    if args.json:
+        print_json({"steps": report.steps, "suggestions": report.suggestions,
+                    "ok": not report.failed})  # fmt: skip
+    else:
+        print_table(["step", "status", "detail"], report.steps)
+        for suggestion in report.suggestions:
+            print(f"\nsuggestion: {suggestion}")
+        if not report.failed:
+            print(
+                "\nNext: review /etc/nazar/config.yaml, add your own IPs to "
+                "policy.allowlist_cidrs, then try `nazar run --dry-run --once`."
+            )
+    return 1 if report.failed else 0
+
+
+async def _init_checks(cfg: Config, report: bootstrap.InitReport) -> None:
+    app = build_app(cfg)
+    try:
+        lapi_ok = await app.lapi.health()
+        report.add("crowdsec lapi", "ok" if lapi_ok else "error", cfg.crowdsec.lapi_url)
+        health = await app.backend.health()
+        if not health.reachable:
+            report.add("ollama", "error", f"unreachable at {cfg.analyst.ollama_url}")
+            return
+        report.add("ollama", "ok", health.version or "")
+        if not health.model_present:
+            report.add("model", "error", f"run: ollama pull {cfg.analyst.model}")
+            return
+        report.add("model", "ok", cfg.analyst.model)
+        result = await run_eval(app.analyst, load_cases()[:1])
+        ok = result.invalid == 0
+        latency = result.latencies_ms[0] if result.latencies_ms else None
+        detail = f"valid model output in {latency} ms" if ok else "model output was invalid"
+        report.add("self-test", "ok" if ok else "warning", detail)
+    finally:
+        await app.aclose()
