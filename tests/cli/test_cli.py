@@ -95,7 +95,7 @@ def test_run_once_dry_run(env: Path, capsys: pytest.CaptureFixture[str]) -> None
         assert main(_args(env, "run", "--once", "--dry-run")) == 0
     out = capsys.readouterr().out
     assert "2 incident(s) triaged" in out
-    assert out.count("would=report_only") == 2
+    assert out.count("would=approval") == 1 and out.count("would=report_only") == 1
 
 
 def test_run_once_json(env: Path, capsys: pytest.CaptureFixture[str]) -> None:

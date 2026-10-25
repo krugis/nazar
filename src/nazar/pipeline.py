@@ -110,7 +110,7 @@ class Pipeline:
             allowlist_match=allowlist_match,
             auto_enforced_last_hour=store.decisions.count_auto_enforced(since),
         )
-        decision = evaluate(inp, self._cfg.policy, self._cfg.mode)
+        decision = evaluate(inp, self._cfg.policy, self._cfg.mode, self._allowlist)
         with store.transaction():
             verdict_id = store.verdicts.add(incident.incident_id, record)
             store.audit.append(

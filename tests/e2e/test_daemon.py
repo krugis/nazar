@@ -67,10 +67,14 @@ async def test_run_once_dry_run(lapi_mock: respx.MockRouter, make_app: Any) -> N
     results = await Daemon(app, reporter=lines.append).run_once()
     ips = sorted(r.incident.source_ip for r in results)
     assert ips == ["198.51.100.7", "203.0.113.45"]
+    intended = {}
     for r in results:
         assert r.verdict.verdict is VerdictLabel.MALICIOUS
-        assert r.decision is not None and r.decision.outcome is Outcome.REPORT_ONLY
-    assert len(lines) == 2 and "would=report_only" in lines[0]
+        assert r.decision is not None and r.decision.outcome is Outcome.REPORT_ONLY  # dry-run
+        intended[r.incident.source_ip] = r.decision.intended_outcome
+    # R8: one scenario and no CTI/history → approval; R5: CrowdSec already bans → report only.
+    assert intended == {"198.51.100.7": Outcome.APPROVAL, "203.0.113.45": Outcome.REPORT_ONLY}
+    assert len(lines) == 2 and "would=approval" in lines[0]
     # No call ever writes to CrowdSec in M1.
     assert not [
         c

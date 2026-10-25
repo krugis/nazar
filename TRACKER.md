@@ -33,7 +33,7 @@ Design: [DESIGN.md](DESIGN.md) (what/why) · [docs/lld/](docs/lld/README.md) (ho
 | F-13 | Prompt `prompts/triage.md` (triage-v1) + prompt builder + escaping | [07](docs/lld/07-analyst.md) | done | |
 | F-14 | Verdict parser (`<think>` stripping, fences, JSON scan) | [07](docs/lld/07-analyst.md) | done | |
 | F-15 | Ollama backend + Analyst (retry once, fallback `unknown`) | [07](docs/lld/07-analyst.md) | done | |
-| F-16 | App composition + Pipeline + Daemon (collect, triage, housekeeping) | [11](docs/lld/11-daemon.md) | done | policy is an M1 placeholder (report only) until P-1 |
+| F-16 | App composition + Pipeline + Daemon (collect, triage, housekeeping) | [11](docs/lld/11-daemon.md) | done | |
 | F-17 | CLI skeleton + `run [--dry-run] [--once]`, `config check`, `status` | [12](docs/lld/12-cli.md) | done | |
 | F-18 | `test-model` + ~20 labelled eval incidents | [07](docs/lld/07-analyst.md#evaluation-nazar-test-model) | done | 22 cases |
 | F-19 | M1 acceptance on a live CrowdSec + Ollama (dry-run, valid verdicts, no CrowdSec changes) | DESIGN §9 | blocked | dev host has <1 GB free disk; needs a test VM. Also verify LAPI `include_capi`, default `limit`, sort order |
@@ -42,7 +42,7 @@ Design: [DESIGN.md](DESIGN.md) (what/why) · [docs/lld/](docs/lld/README.md) (ho
 
 | ID | Item | LLD | Status | Notes |
 |---|---|---|---|---|
-| P-1 | Policy engine rules R1–R11 + table and property tests | [08](docs/lld/08-policy.md) | todo | |
+| P-1 | Policy engine rules R1–R11 + table and property tests | [08](docs/lld/08-policy.md) | done | engine takes an `IpMatcher` protocol so policy never imports prefilter |
 | P-2 | Actuator: LAPI backend, idempotency, refusal guards | [09](docs/lld/09-actuator.md) | todo | |
 | P-3 | Rollback (by alert ID, by filter) + crash reconcile | [09](docs/lld/09-actuator.md#rollback) | todo | |
 | P-4 | cscli fallback backend | [09](docs/lld/09-actuator.md#cscli-fallback) | todo | off by default |

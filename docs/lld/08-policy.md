@@ -23,11 +23,12 @@ class PolicyInput:
     approved_by: str | None = None   # set when re-evaluating a human approval (10, 12)
 
 def evaluate(inp: PolicyInput, cfg: PolicyConfig, mode: Mode,
-             allowlist: AllowList | None = None) -> Decision
+             allowlist: IpMatcher | None = None) -> Decision
 ```
 
-`allowlist` (pure object from 05) lets the engine re-check the IP itself; a match from either source
-denies.
+`allowlist` is any object with `match(ip) -> str | None` (the `IpMatcher` protocol in
+`policy/types.py`; `prefilter.AllowList` satisfies it, so policy never imports prefilter). It lets the
+engine re-check the IP itself; a match from either source denies.
 
 ## Algorithm
 
@@ -60,7 +61,8 @@ this document.
 
 1. An allow-listed/protected IP always yields `no_action`, for any verdict, mode, approval or budget.
 2. Dry-run never yields `auto` or `approval`.
-3. Output action ∈ `Action`; enforcing decisions always carry a duration ≤ `max_ban_duration`.
+3. Output action ∈ `Action`; every enforcing decision that can be applied (intended `auto` or
+   `approval`) carries a duration, and any duration is ≤ `max_ban_duration`.
 4. A single scenario with no CTI/history never becomes `auto` enforcing.
 5. Budget exhaustion never yields `auto` enforcing without `approved_by`.
 6. `evaluate` is deterministic: same input, same output.
