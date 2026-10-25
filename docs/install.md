@@ -10,7 +10,7 @@ Nazar runs next to CrowdSec on the same Linux server. It needs no GPU and no clo
 | [CrowdSec](https://docs.crowdsec.net/) Security Engine | with at least one bouncer (firewall, nginx, …) |
 | [Ollama](https://ollama.com) | listening on `127.0.0.1:11434` |
 | Python 3.11+ with `venv` | e.g. `apt install python3 python3-venv` on Ubuntu 24.04 |
-| 4 GB RAM or more | the default model uses about 1.2 GB |
+| 4 GB RAM or more | the default model needs about 2.5 GB ([details](models.md)) |
 
 ## 1. Install CrowdSec and a bouncer
 
@@ -25,7 +25,7 @@ sudo cscli bouncers list
 
 ```bash
 curl -fsSL https://ollama.com/install.sh | sh
-ollama pull hf.co/Nguuma/security-slm-unsloth-1.5b
+ollama pull granite4:micro-h
 ```
 
 ## 3. Install Nazar

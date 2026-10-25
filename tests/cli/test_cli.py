@@ -80,9 +80,7 @@ def _mock_services(router: respx.MockRouter) -> None:
         return_value=httpx.Response(200, json={"version": "0.12.0"})
     )
     router.get("http://ollama.test/api/tags").mock(
-        return_value=httpx.Response(
-            200, json={"models": [{"name": "hf.co/Nguuma/security-slm-unsloth-1.5b:latest"}]}
-        )
+        return_value=httpx.Response(200, json={"models": [{"name": "granite4:micro-h"}]})
     )
     router.post("http://ollama.test/api/chat").mock(
         return_value=httpx.Response(200, json={"message": {"content": VALID}})

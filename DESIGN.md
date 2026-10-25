@@ -10,7 +10,7 @@
 
 ### Goals
 1. Add a **local AI triage layer** on top of CrowdSec that reduces noise, correlates events, explains incidents and proposes or applies bounded actions.
-2. Run fully **on-host, on CPU**, with a small model (~1.5B parameters, quantized).
+2. Run fully **on-host, on CPU**, with a small model (~1.5–4B parameters, quantized).
 3. **Never weaken** the existing CrowdSec protection. If Nazar fails, CrowdSec keeps working exactly as before.
 4. Every action is **bounded, tagged, auditable and reversible**.
 5. Simple to install and operate for a single server. The design must not block a later multi-server or commercial layer.
@@ -76,8 +76,8 @@ Enrichment failures never block triage; missing fields are passed as `null`.
 
 ### 3.4 Analyst (SLM)
 - **Runtime:** Ollama on `127.0.0.1:11434`. *Verify* the `/api/chat` request format, including `format` (JSON schema) and the `think` option for reasoning models.
-- **Default model:** `Nguuma/security-slm-unsloth-1.5b` (GGUF Q4_K_M, about 1.2 GB RAM, Apache-2.0). The model name is configurable so other models can be swapped in.
-- **This is a reasoning model.** Request JSON-schema-constrained output. If `<think>…</think>` content is present, strip it before parsing. Never treat the reasoning text as the answer.
+- **Default model:** `granite4:micro-h` (IBM Granite 4.0 Micro-H, 3B, Q4_K_M, ~1.9 GB download, ~2.5 GB RAM, Apache-2.0, non-reasoning). Chosen after live evaluation (see [docs/models.md](docs/models.md)); the first default, a 1.5B security reasoning model, could not answer reliably on CPU. The model name is configurable so other models can be swapped in.
+- **Reasoning models are supported but not preferred.** Request JSON-schema-constrained output; for models with the thinking capability send `think: false`. If `<think>…</think>` content is present, strip it before parsing. Never treat the reasoning text as the answer.
 - **Input:** a compact, structured incident summary. Raw log lines are truncated, escaped and wrapped in clearly marked data blocks (see §5.2).
 - **Output:** must validate against the `Verdict` schema (§4.2). On invalid output, retry once with a short repair prompt, then fall back to `verdict = "unknown"`, which means no action and the incident is reported.
 - **Settings:** low temperature (0.1–0.2), timeout `analyst.timeout_seconds` (default 60), fixed context limit.
@@ -235,7 +235,7 @@ prefilter:
 
 analyst:
   ollama_url: http://127.0.0.1:11434
-  model: hf.co/Nguuma/security-slm-unsloth-1.5b
+  model: granite4:micro-h
   timeout_seconds: 60
   temperature: 0.1
   max_calls_per_minute: 10
@@ -415,7 +415,7 @@ Additional v2 ideas:
 ---
 
 ## 12. Open questions
-1. Is a 1.5B reasoning model accurate enough for triage? Compare it with Qwen3-4B-Instruct and others using `nazar test-model` before v1.0.
+1. ~~Is a 1.5B reasoning model accurate enough for triage?~~ Answered (Oct 2026, [docs/models.md](docs/models.md)): no on CPU (its reasoning overran the token budget). A 3B non-reasoning generalist (Granite 4.0 Micro-H) scored 21/22. Re-evaluate 4B models (Qwen3-4B-Instruct, Phi-4-mini) and Foundation-Sec-8B on a larger host before v1.0.
 2. Polling vs. streaming: does LAPI offer a better way to receive new alerts than polling? *Verify.*
 3. Captcha support depends on the bouncer. Detect what is available during `nazar init`.
 4. Should there be a local web UI in the open core, or only CLI and Telegram? Currently CLI and Telegram only, with a dashboard as a commercial candidate.

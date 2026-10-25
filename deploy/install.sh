@@ -95,7 +95,7 @@ cat <<'NEXT'
 
 Next steps:
   1. Edit /etc/nazar/config.yaml: add your own IPs to policy.allowlist_cidrs.
-  2. Pull the model:   ollama pull hf.co/Nguuma/security-slm-unsloth-1.5b
+  2. Pull the model:   ollama pull granite4:micro-h
   3. Try a dry run:    sudo -u nazar nazar run --dry-run --once
   4. Start the daemon: systemctl start nazar     (still dry-run until you set mode: active)
 NEXT

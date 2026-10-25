@@ -84,7 +84,7 @@ Design: [DESIGN.md](DESIGN.md) (what/why) · [docs/lld/](docs/lld/README.md) (ho
 |---|---|---|
 | V-1 | Freeze config format and data contracts | todo |
 | V-2 | Performance: p95 < 60 s per incident on 4 vCPU, 500 alerts/h in dry-run | todo |
-| V-3 | Model comparison (security-slm-1.5b vs Qwen3-4B-Instruct, …) via `test-model` (DESIGN open question 1) | todo |
+| V-3 | Model comparison via `test-model` (DESIGN open question 1) | wip | Oct 25, 2 vCPU host: **granite4:micro-h 21/22, 0% invalid, ~50 s** → new default; security-slm-1.5b rejected (reasoning overruns, no answer in 2/3 runs); Cybersecurity-Qwen2.5-3B rejected (everything malicious at 1.0). Details: [docs/models.md](docs/models.md). Next: 4B/8B candidates on a host with 8 GB RAM |
 
 ## Open items to verify (from the LLD)
 

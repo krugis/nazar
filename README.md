@@ -40,7 +40,7 @@ The model runs **entirely on your server**. Nazar needs no GPU and no cloud LLM,
 ### v1: AI triage (implemented, in validation)
 - Reads alerts from the CrowdSec Local API
 - Enrichment: CrowdSec CTI reputation, GeoIP/ASN, local history for the IP
-- Local triage with a small security model ([security-slm-1.5b](https://huggingface.co/Nguuma/security-slm-unsloth-1.5b), GGUF Q4_K_M, ~1.2 GB RAM) through [Ollama](https://ollama.com)
+- Local triage with a small, non-reasoning model ([IBM Granite 4.0 Micro-H](https://ollama.com/library/granite4), 3B, Q4_K_M, Apache-2.0) through [Ollama](https://ollama.com): 21/22 on Nazar's labelled incidents, ~50 s per incident on 2 vCPU ([model comparison](docs/models.md))
 - Policy engine with allow-lists, a maximum ban duration and approval tiers
 - Actions applied as CrowdSec decisions, tagged and auditable
 - Telegram notifications with **Approve / Reject** buttons
@@ -69,14 +69,14 @@ Nazar is a security tool, so it must not become an attack surface.
 - [CrowdSec](https://docs.crowdsec.net/) Security Engine with at least one bouncer
 - [Ollama](https://ollama.com)
 - Python 3.11+
-- 4 GB RAM or more (the model uses about 1.2 GB)
+- 4 GB RAM or more (the model needs about 2.5 GB; see [docs/models.md](docs/models.md) for tight hosts)
 
 ## Quick start
 
 ```bash
 # 1. Install CrowdSec and a bouncer (see the CrowdSec docs), and Ollama
 # 2. Pull the model
-ollama pull hf.co/Nguuma/security-slm-unsloth-1.5b
+ollama pull granite4:micro-h
 # 3. Install Nazar (creates the nazar user, config, secrets, CrowdSec machine, systemd unit)
 git clone https://github.com/krugis/nazar-sec-nazar && cd nazar-sec-nazar
 sudo sh deploy/install.sh --from .

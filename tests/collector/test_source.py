@@ -44,8 +44,9 @@ def test_normalize_filters(clock: FrozenClock) -> None:
 
 
 def test_expired_decision_not_active(clock: FrozenClock) -> None:
-    clock.advance(hours=5)
-    event = alert_to_event(_alerts()[0], now=clock.now(), max_lines=20, max_len=300)
+    alert = _alerts()[0]
+    alert["decisions"][0]["until"] = "2026-10-25T16:00:00Z"  # before the frozen clock
+    event = alert_to_event(alert, now=clock.now(), max_lines=20, max_len=300)
     assert event is not None and event.crowdsec_decisions == []
 
 

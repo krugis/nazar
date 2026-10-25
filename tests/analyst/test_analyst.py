@@ -129,9 +129,7 @@ async def test_ollama_health(http: httpx.AsyncClient) -> None:
         return_value=httpx.Response(200, json={"version": "0.12"})
     )
     respx.get(f"{OLLAMA}/api/tags").mock(
-        return_value=httpx.Response(
-            200, json={"models": [{"name": "hf.co/Nguuma/security-slm-unsloth-1.5b:latest"}]}
-        )
+        return_value=httpx.Response(200, json={"models": [{"name": "granite4:micro-h"}]})
     )
     h = await OllamaBackend(AnalystConfig(), http).health()
     assert h.reachable and h.model_present and h.version == "0.12"

@@ -11,13 +11,14 @@ No. The model runs locally in Ollama. The only optional outbound calls are the C
 text).
 
 **Do I need a GPU?**
-No. The default model is a 1.5B-parameter model quantized to about 1.2 GB and runs on CPU. Triage
-of one incident takes seconds to tens of seconds; Nazar groups alerts so it calls the model far
+No. The default model, IBM Granite 4.0 Micro-H, has 3B parameters, is quantized to about 1.9 GB and
+runs on CPU. Triage of one incident took about 50 s on a 2-vCPU server (faster on more cores); Nazar groups alerts so it calls the model far
 less often than CrowdSec raises alerts, and rate-limits calls (`analyst.max_calls_per_minute`).
 
 **Can I use another model?**
 Yes: any Ollama model that can follow a JSON schema. Set `analyst.model` and compare models with
 `nazar test-model`, which reports accuracy, invalid-output rate and latency on a labelled set.
+[models.md](models.md) lists the models tested so far and why the default was chosen.
 
 **What if the model is wrong?**
 The policy engine limits the damage: no action on allow-listed or private addresses, bans need an

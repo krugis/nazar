@@ -35,7 +35,7 @@ prefilter:
 
 analyst:
   ollama_url: http://127.0.0.1:11434
-  model: hf.co/Nguuma/security-slm-unsloth-1.5b
+  model: granite4:micro-h
   timeout_seconds: 60
   temperature: 0.1
   max_calls_per_minute: 10              # excess incidents queue; overflow is summarized

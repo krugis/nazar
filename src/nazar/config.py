@@ -85,7 +85,7 @@ class PrefilterConfig(_Section):
 
 class AnalystConfig(_Section):
     ollama_url: str = "http://127.0.0.1:11434"
-    model: str = "hf.co/Nguuma/security-slm-unsloth-1.5b"
+    model: str = "granite4:micro-h"
     timeout_seconds: float = Field(default=60.0, gt=0)
     temperature: float = Field(default=0.1, ge=0.0, le=1.0)
     max_calls_per_minute: int = Field(default=10, ge=1)

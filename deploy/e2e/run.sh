@@ -6,7 +6,7 @@
 #   KEEP=1 ./run.sh                      # keep the stack afterwards for inspection
 set -eu
 cd "$(dirname "$0")"
-MODEL="${MODEL:-hf.co/Nguuma/security-slm-unsloth-1.5b}"
+MODEL="${MODEL:-granite4:micro-h}"
 PW="e2e-$(od -An -N8 -tx1 /dev/urandom | tr -d ' \n')"
 DC="docker compose"
 fail() { printf 'E2E FAIL: %s\n' "$*" >&2; exit 1; }

@@ -45,7 +45,7 @@ CREATE TABLE verdicts (
   id             INTEGER PRIMARY KEY,
   incident_id    TEXT NOT NULL REFERENCES incidents(id) ON DELETE CASCADE,
   created_at     TEXT NOT NULL,
-  model          TEXT NOT NULL,            -- e.g. hf.co/Nguuma/security-slm-unsloth-1.5b, or "none"
+  model          TEXT NOT NULL,            -- e.g. granite4:micro-h, or "none"
   prompt_version TEXT NOT NULL,
   verdict        TEXT NOT NULL,
   severity       TEXT NOT NULL,

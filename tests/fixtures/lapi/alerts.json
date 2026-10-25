@@ -32,7 +32,7 @@
     ],
     "decisions": [
       {"id": 9001, "origin": "crowdsec", "type": "ban", "scope": "Ip", "value": "203.0.113.45",
-       "duration": "3h59m", "until": "2026-10-25T21:02:12Z", "scenario": "crowdsecurity/ssh-bf",
+       "duration": "3h59m", "until": "2099-01-01T00:00:00Z", "scenario": "crowdsecurity/ssh-bf",
        "simulated": false}
     ]
   },

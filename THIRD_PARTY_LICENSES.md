@@ -19,7 +19,7 @@ Development-only tools (pytest, pytest-asyncio, respx, ruff, mypy) are not distr
 
 | Model | License | Notes |
 |---|---|---|
-| [Nguuma/security-slm-unsloth-1.5b](https://huggingface.co/Nguuma/security-slm-unsloth-1.5b) | Apache-2.0 (per the model card; check the card for the base model's terms) | default triage model, pulled by the user through Ollama |
+| [IBM Granite 4.0 Micro-H](https://ollama.com/library/granite4) (`granite4:micro-h`) | Apache-2.0 | default triage model, pulled by the user through Ollama |
 
 Any other model configured in `analyst.model` is subject to its own license.
 
