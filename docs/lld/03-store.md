@@ -57,7 +57,9 @@ CREATE TABLE events (
   merged_alerts INTEGER NOT NULL DEFAULT 1,
   sample_lines  TEXT NOT NULL,             -- JSON array
   labels        TEXT NOT NULL,             -- JSON array
-  crowdsec_decisions TEXT NOT NULL         -- JSON array
+  crowdsec_decisions TEXT NOT NULL,        -- JSON array
+  country       TEXT,
+  asn           TEXT
 );
 CREATE INDEX ix_events_incident ON events(incident_id);
 

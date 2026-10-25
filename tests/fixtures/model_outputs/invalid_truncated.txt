@@ -1,0 +1,1 @@
+{"verdict":"malicious","severity":"high","confidence":0.92,"attack_tactics":["TA

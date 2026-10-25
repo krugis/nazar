@@ -1,0 +1,5 @@
+Here is my answer:
+```json
+{"verdict":"malicious","severity":"high","confidence":0.92,"attack_tactics":["TA0006 Credential Access"],"summary":"SSH brute force from a known malicious IP.","reasoning_points":["6 failed logins","CTI malicious"],"proposed_action":"ban","proposed_duration":"4h"}
+```
+Done.

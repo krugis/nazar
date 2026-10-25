@@ -43,6 +43,7 @@ nazar = "nazar.cli:main"
 packages = ["src/nazar"]
 
 [tool.hatch.build.targets.wheel.force-include]
+"prompts" = "nazar/prompts"
 "examples/config.yaml" = "nazar/data/config.example.yaml"
 
 [tool.pytest.ini_options]

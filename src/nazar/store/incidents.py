@@ -153,6 +153,8 @@ class EventRow:
     sample_lines: list[str]
     labels: list[str]
     crowdsec_decisions: list[str]
+    country: str | None = None
+    asn: str | None = None
 
     @classmethod
     def from_row(cls, row: sqlite3.Row) -> EventRow:
@@ -168,6 +170,8 @@ class EventRow:
             sample_lines=loads(row["sample_lines"]),
             labels=loads(row["labels"]),
             crowdsec_decisions=loads(row["crowdsec_decisions"]),
+            country=row["country"],
+            asn=row["asn"],
         )
 
 
@@ -179,8 +183,8 @@ class EventRepo:
     def add(self, incident_id: str, event: Event, max_lines: int) -> EventRow:
         cur = self._db.execute(
             "INSERT INTO events (incident_id, alert_id, scenario, first_ts, last_ts, event_count,"
-            " merged_alerts, sample_lines, labels, crowdsec_decisions)"
-            " VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?)",
+            " merged_alerts, sample_lines, labels, crowdsec_decisions, country, asn)"
+            " VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)",
             (
                 incident_id,
                 event.alert_id,
@@ -191,6 +195,8 @@ class EventRepo:
                 dumps(event.sample_lines[:max_lines]),
                 dumps(event.labels),
                 dumps(event.crowdsec_decisions),
+                event.country,
+                event.asn,
             ),
         )
         row = self._db.one("SELECT * FROM events WHERE id = ?", (cur.lastrowid,))

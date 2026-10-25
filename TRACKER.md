@@ -29,10 +29,10 @@ Design: [DESIGN.md](DESIGN.md) (what/why) · [docs/lld/](docs/lld/README.md) (ho
 | F-9 | Allow-list (protected ranges, host addresses, config CIDRs) | [05](docs/lld/05-prefilter.md) | done | CrowdSec allow-list import (`import_allowlists`) moved to P-10 |
 | F-10 | Grouper: dedupe, incidents, needs-triage, skip-trivial | [05](docs/lld/05-prefilter.md) | done | skip-trivial check runs in the pipeline (F-16) |
 | F-11 | Triage queue: priority, token bucket, overflow bulk summary | [05](docs/lld/05-prefilter.md) | done | evicted IDs are recorded by the daemon (F-16) |
-| F-12 | Enricher framework + alert_geo + history providers | [06](docs/lld/06-enrich.md) | todo | CTI in M2 |
-| F-13 | Prompt `prompts/triage.md` (triage-v1) + prompt builder + escaping | [07](docs/lld/07-analyst.md) | todo | |
-| F-14 | Verdict parser (`<think>` stripping, fences, JSON scan) | [07](docs/lld/07-analyst.md) | todo | |
-| F-15 | Ollama backend + Analyst (retry once, fallback `unknown`) | [07](docs/lld/07-analyst.md) | todo | |
+| F-12 | Enricher framework + alert_geo + history providers | [06](docs/lld/06-enrich.md) | done | CTI in M2 |
+| F-13 | Prompt `prompts/triage.md` (triage-v1) + prompt builder + escaping | [07](docs/lld/07-analyst.md) | done | |
+| F-14 | Verdict parser (`<think>` stripping, fences, JSON scan) | [07](docs/lld/07-analyst.md) | done | |
+| F-15 | Ollama backend + Analyst (retry once, fallback `unknown`) | [07](docs/lld/07-analyst.md) | done | |
 | F-16 | App composition + Pipeline + Daemon (collect, triage, housekeeping) | [11](docs/lld/11-daemon.md) | todo | policy stub = report_only until P-1 |
 | F-17 | CLI skeleton + `run [--dry-run] [--once]`, `config check`, `status` | [12](docs/lld/12-cli.md) | todo | |
 | F-18 | `test-model` + ~20 labelled eval incidents | [07](docs/lld/07-analyst.md#evaluation-nazar-test-model) | todo | |
