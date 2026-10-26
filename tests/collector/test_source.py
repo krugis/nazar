@@ -116,3 +116,23 @@ async def test_poll_truncated(http: httpx.AsyncClient, store: Store, clock: Froz
         PrefilterConfig(),
     )
     assert (await source.poll()).truncated
+
+
+@pytest.mark.parametrize(
+    ("decision", "active"),
+    [
+        # CrowdSec 1.8.1 as seen live: no "until", duration = remaining time
+        ({"type": "ban", "duration": "3h59m59s"}, True),
+        ({"type": "ban", "duration": "-24s"}, False),  # deleted or expired
+        ({"type": "ban", "duration": "-1h2m3.5s"}, False),
+        ({"type": "ban", "until": "2099-01-01T00:00:00Z", "duration": "-1s"}, True),  # until wins
+        ({"type": "ban", "until": "2020-01-01T00:00:00Z"}, False),
+        ({"type": "ban"}, True),  # nothing known: assume active (conservative for R5)
+        ({"type": "ban", "duration": "4h", "simulated": True}, False),
+    ],
+)
+def test_decision_activity(clock: FrozenClock, decision: dict[str, Any], active: bool) -> None:
+    alert = _alerts()[0] | {"decisions": [decision]}
+    event = alert_to_event(alert, now=clock.now(), max_lines=20, max_len=300)
+    assert event is not None
+    assert (event.crowdsec_decisions == ["ban"]) is active

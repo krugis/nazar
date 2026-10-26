@@ -74,8 +74,10 @@ Return `None` (and log at debug) when:
 - `simulated` is true (decisions in simulation mode are not real signals)
 
 Field mapping is listed in 01 (Event). Details:
-- `crowdsec_decisions`: `type` of each `decisions[]` entry whose `until` is in the future (or which
-  has no `until`).
+- `crowdsec_decisions`: `type` of each `decisions[]` entry still in force: `until` in the future
+  when present; otherwise `duration` not negative. Verified live with CrowdSec 1.8.1: alerts omit
+  `until` and report `duration` as the remaining time, negative once the decision expired or was
+  deleted (`-24s`). Without this, every past CrowdSec ban looked active forever and R5 blocked Nazar.
 - `asn`: `"AS{as_number} {as_name}"` when both exist.
 - `sample_lines`: CrowdSec does not ship raw log lines in alerts. Build one line per entry in
   `events[]` from its `meta` list: `key=value` pairs joined with `" "`, keys sorted, only the keys in

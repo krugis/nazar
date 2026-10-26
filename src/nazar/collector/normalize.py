@@ -57,19 +57,29 @@ def _sample_lines(alert: dict[str, Any], max_lines: int, max_len: int) -> list[s
     return lines
 
 
+def _is_active(decision: dict[str, Any], now: datetime) -> bool:
+    """Whether a decision attached to an alert is still in force.
+
+    ``until`` is used when present. CrowdSec 1.8 omits it in alerts and reports ``duration`` as
+    the *remaining* time, negative once the decision expired or was deleted (e.g. ``-24s``).
+    """
+    until = decision.get("until")
+    if until:
+        try:
+            return from_iso(str(until)) > now
+        except ValueError:
+            pass
+    duration = str(decision.get("duration") or "").strip()
+    return not duration.startswith("-")
+
+
 def _active_decisions(alert: dict[str, Any], now: datetime) -> list[str]:
     types: set[str] = set()
     for decision in alert.get("decisions") or []:
         if not isinstance(decision, dict) or decision.get("simulated"):
             continue
-        until = decision.get("until")
-        if until:
-            try:
-                if from_iso(str(until)) <= now:
-                    continue
-            except ValueError:
-                pass
-        types.add(clean_line(decision.get("type", ""), 32))
+        if _is_active(decision, now):
+            types.add(clean_line(decision.get("type", ""), 32))
     return sorted(t for t in types if t)
 
 
