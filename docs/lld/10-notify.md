@@ -32,7 +32,7 @@ class InteractiveNotifier(Notifier, Protocol):
 |---|---|---|
 | `AutoActionNote` (`auto_action`) | an automatic ban/captcha was applied | Rollback (valid for `max_ban_duration`) |
 | `ApprovalNote` (`approval`) | the policy asks for approval | Approve, Reject (valid until the approval expires) |
-| `IncidentNote` (`incident`) | an auto `notify` action, or a `report_only` incident with severity ≥ high | — |
+| `IncidentNote` (`incident`) | an auto `notify` action, or a `report_only` incident with severity ≥ high; filtered by `notifier.incident_notes` (`all`, `unblocked` = only when CrowdSec is not already blocking the IP, `none`). Shows whether CrowdSec already blocks the IP and what Nazar did (`describe_action`) | — |
 | `TextNote` (`daily_summary`, `report`) | daily summary, `nazar report --send` | — |
 | `HealthNote` (`health`) | component (`lapi`, `ollama`, `model`, `model_output`, `cti`, `telegram`, `volume`) changes state | — |
 

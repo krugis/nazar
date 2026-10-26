@@ -34,7 +34,7 @@ Defaults equal DESIGN §6. Only additions beyond DESIGN are listed with a ★.
 | `prefilter` | `dedupe_window_seconds` (300), `incident_window_minutes` (30), `max_sample_lines`★ (20), `max_line_length`★ (300) |
 | `analyst` | `ollama_url`, `model`, `timeout_seconds`, `temperature`, `max_calls_per_minute`, `prompt_version`, `num_ctx`★ (4096), `num_predict`★ (2048: reasoning and answer share it), `max_queue`★ (200), `think`★ (`null` = auto: `false` for models with the `thinking` capability, else omitted), `keep_alive`★ (`30m`) |
 | `policy` | `auto_actions`, `auto_min_confidence`, `approval_min_confidence`, `max_ban_duration`, `max_auto_actions_per_hour`, `allowlist_cidrs`, `default_ban_duration`★ (`4h`), `host_addresses`★, `captcha_available`★ (false) |
-| `notifier` | `telegram.{enabled, bot_token_env, chat_id, allowed_user_ids★}`, `approval_ttl_minutes`, `daily_summary_time`, `timezone` |
+| `notifier` | `telegram.{enabled, bot_token_env, chat_id, allowed_user_ids★}`, `incident_notes`★ (`all` \| `unblocked` \| `none`), `approval_ttl_minutes`, `daily_summary_time`, `timezone` |
 | `enrich`★ | `timeout_seconds` (5), `geoip_country_db`, `geoip_asn_db` (paths, optional) |
 | `host_context` | `exposed_services` |
 | `store` | `path`, `retention_days` |

@@ -175,7 +175,10 @@ class Pipeline:
         serious = (
             decision.outcome is Outcome.REPORT_ONLY and verdict.severity.rank >= Severity.HIGH.rank
         )
-        if notify or serious:
+        wanted = self._cfg.notifier.incident_notes
+        if wanted == "unblocked" and incident.crowdsec_already_banned:
+            wanted = "none"
+        if (notify or serious) and wanted != "none":
             await self._notify(
                 IncidentNote(
                     incident_id=incident.incident_id,
@@ -186,6 +189,8 @@ class Pipeline:
                     confidence=verdict.confidence,
                     summary=verdict.summary,
                     outcome=decision.intended_outcome.value,
+                    crowdsec_blocking=incident.crowdsec_already_banned,
+                    nazar_did=describe_action(decision),
                 )
             )
         return None, None
@@ -268,6 +273,27 @@ class Pipeline:
                 continue
             events = self._store.events.for_incident(incident_id)
             self._skip(build_incident(row, events, self._cfg), reason)
+
+
+def describe_action(decision: Decision) -> str:
+    """What Nazar did about an incident, in plain words (for notifications)."""
+    reasons = " ".join(decision.reasons)
+    if decision.action is Action.NOTIFY and decision.outcome is Outcome.AUTO:
+        return "notification only (this message); no ban needed"
+    if "R11" in reasons:
+        planned = (
+            "send a notification"
+            if decision.action is Action.NOTIFY
+            else (f"{decision.action.value} ({decision.intended_outcome.value.replace('_', ' ')})")
+        )
+        return f"dry-run, nothing changed; active mode would {planned}"
+    if "R5" in reasons:
+        return "no extra ban: CrowdSec already blocks this IP"
+    if "R4" in reasons:
+        return "reported only: the verdict does not justify a ban"
+    if decision.outcome is Outcome.REPORT_ONLY:
+        return "reported only: confidence too low to act"
+    return decision.outcome.value.replace("_", " ")
 
 
 def report_line(result: PipelineResult) -> str:

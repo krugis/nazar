@@ -100,3 +100,18 @@ async def test_fanout_isolates_failures() -> None:
 def test_unknown_kind_rejected() -> None:
     with pytest.raises(ValueError):
         HealthNote(component="x", state="exploded")  # type: ignore[arg-type]
+
+
+def test_incident_note_says_who_blocks_and_what_nazar_did() -> None:
+    from nazar.notify import IncidentNote
+
+    note = IncidentNote(incident_id="inc_1", ip="198.51.100.7", scenarios=["ssh-bf"],
+                        verdict="suspicious", severity="medium", confidence=0.75, summary="x",
+                        outcome="auto", crowdsec_blocking=True,
+                        nazar_did="notification only (this message); no ban needed")  # fmt: skip
+    text = render(note)
+    assert "CrowdSec: already blocking this IP" in text
+    assert "Nazar: notification only (this message); no ban needed" in text
+    assert "CrowdSec: not blocking this IP" in render(
+        note.model_copy(update={"crowdsec_blocking": False})
+    )

@@ -68,6 +68,9 @@ notifier:
     bot_token_env: NAZAR_TG_TOKEN       # secret: bot token
     chat_id: ""                         # required when enabled
     allowed_user_ids: []                # recommended for group chats
+  incident_notes: all                   # all | unblocked (only if CrowdSec is not already blocking
+                                        # the IP) | none. Approvals, auto actions, health alerts
+                                        # and the daily summary are always sent.
   approval_ttl_minutes: 60              # an unanswered approval expires: no action
   daily_summary_time: "09:00"
   timezone: UTC                         # IANA name, e.g. Europe/Istanbul

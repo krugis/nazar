@@ -186,3 +186,47 @@ async def test_model_outage_gives_up_after_max_retries(
     assert len(results) == 2
     assert all(r.verdict.verdict is VerdictLabel.UNKNOWN for r in results)
     assert all(not r.valid_output for r in results)
+
+
+@pytest.mark.parametrize(
+    ("setting", "expected_ips"),
+    [
+        ("all", {"198.51.100.7", "203.0.113.45"}),
+        ("unblocked", {"198.51.100.7"}),  # CrowdSec already bans 203.0.113.45 in the fixture
+        ("none", set()),
+    ],
+)
+async def test_incident_notes_setting(
+    lapi_mock: respx.MockRouter,
+    tmp_path: Path,
+    clock: FrozenClock,
+    setting: str,
+    expected_ips: set[str],
+) -> None:
+    from nazar.config import NotifierConfig
+    from nazar.notify import IncidentNote, Note
+
+    sent: list[IncidentNote] = []
+
+    class Collect:
+        name = "collect"
+
+        async def send(self, note: Note) -> str | None:
+            if isinstance(note, IncidentNote):
+                sent.append(note)
+            return None
+
+    http = httpx.AsyncClient(base_url=LAPI)
+    cfg = Config(notifier=NotifierConfig(incident_notes=setting))  # type: ignore[arg-type]
+    app = build_app(cfg, clock=clock, store_path=tmp_path / "n.db", lapi_http=http,
+                    backend=FakeBackend(VALID, VALID), host_addresses=[],
+                    extra_notifiers=[Collect()])  # fmt: skip
+    app._clients = (http,)
+    try:
+        await Daemon(app).run_once()
+    finally:
+        await app.aclose()
+    assert {n.ip for n in sent} == expected_ips
+    for n in sent:
+        assert n.nazar_did.startswith("dry-run")
+        assert n.crowdsec_blocking is (n.ip == "203.0.113.45")

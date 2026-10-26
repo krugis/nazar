@@ -65,6 +65,10 @@ class IncidentNote(_Note):
     confidence: float
     summary: str
     outcome: str
+    crowdsec_blocking: bool = False
+    """CrowdSec already has an active ban on this IP (enforced by its bouncers)."""
+    nazar_did: str = ""
+    """What Nazar did about it, in plain words."""
 
 
 class TextNote(_Note):
@@ -126,10 +130,13 @@ def render(n: Note) -> str:
             f"Expires {to_iso(n.expires_at)}. CLI: nazar approve {n.approval_id}"
         )
     if isinstance(n, IncidentNote):
+        crowdsec = "already blocking this IP" if n.crowdsec_blocking else "not blocking this IP"
         return (
             f"[Nazar] {n.severity.upper()} incident {n.incident_id}: {n.ip}\n"
             f"Scenarios: {_scenarios(n.scenarios)}\n"
-            f"Verdict: {n.verdict} / confidence {n.confidence:.2f}, outcome {n.outcome}\n"
+            f"Verdict: {n.verdict} / confidence {n.confidence:.2f}\n"
+            f"CrowdSec: {crowdsec}\n"
+            f"Nazar: {clean_line(n.nazar_did, 200) or n.outcome}\n"
             f"Summary: {_model_text(n.summary)}"
         )
     if isinstance(n, TextNote):

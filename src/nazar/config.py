@@ -157,6 +157,9 @@ _HHMM = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 
 class NotifierConfig(_Section):
     telegram: TelegramConfig = Field(default_factory=TelegramConfig)
+    incident_notes: Literal["all", "unblocked", "none"] = "all"
+    """Informational incident notes: ``all``; ``unblocked`` = only when CrowdSec is not already
+    blocking the IP; ``none``. Approvals, auto actions, health and summaries are always sent."""
     approval_ttl_minutes: int = Field(default=60, ge=1)
     daily_summary_time: str = "09:00"
     timezone: str = "UTC"
