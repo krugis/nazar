@@ -112,7 +112,7 @@ Next steps, in order:
 | H-5 | Health monitor + health notifications | [11](docs/lld/11-daemon.md#health) | done |
 | H-6 | Daily summary + `report [--daily] [--send]` | [10](docs/lld/10-notify.md#daily-summary) | done |
 | H-7 | CLI `approve` / `reject` | [12](docs/lld/12-cli.md) | done |
-| H-8 | M3 acceptance: expiry safe, forged callback rejected, click re-validated | DESIGN §9 | done |
+| H-8 | M3 acceptance: expiry safe, forged callback rejected, click re-validated | DESIGN §9 | done | Oct 26: live Telegram connected (bot, private chat, long polling, test summary delivered); live Approve/Rollback button test still open |
 
 ## M4: Packaging and hardening (v0.4)
 
