@@ -109,7 +109,9 @@ def crowdsec_cidrs(allowlists: Iterable[dict[str, Any]], now: datetime) -> list[
             expiration = item.get("expiration")
             if expiration:
                 try:
-                    if from_iso(str(expiration)) <= now:
+                    expires = from_iso(str(expiration))
+                    # CrowdSec sends Go's zero time (0001-01-01T00:00:00Z) for "never expires".
+                    if expires.year > 1970 and expires <= now:
                         continue
                 except ValueError:
                     pass

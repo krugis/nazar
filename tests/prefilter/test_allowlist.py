@@ -87,3 +87,23 @@ def test_refreshable_allowlist() -> None:
         build_allowlist(PolicyConfig(), host_addresses=[], crowdsec_cidrs=["192.0.2.0/24"])
     )
     assert allow.match("192.0.2.1") == "crowdsec"
+
+
+def test_crowdsec_cidrs_zero_expiration_means_never() -> None:
+    """Shape returned live by CrowdSec 1.8.1 for items created without an expiration."""
+    from datetime import UTC, datetime
+
+    from nazar.prefilter import crowdsec_cidrs
+
+    lists = [
+        {
+            "name": "trusted-admin",
+            "items": [
+                {"value": "198.51.100.0/24", "expiration": "0001-01-01T00:00:00.000Z",
+                 "created_at": "2026-10-26T11:58:12.926Z"},
+                {"value": "203.0.113.0/24", "expiration": "0001-01-01T00:00:00.000Z"},
+            ],
+        }
+    ]  # fmt: skip
+    now = datetime(2026, 10, 26, 12, 0, tzinfo=UTC)
+    assert crowdsec_cidrs(lists, now) == ["198.51.100.0/24", "203.0.113.0/24"]

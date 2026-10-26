@@ -33,7 +33,8 @@ Always-protected networks (cannot be removed by config):
 Then `config` label for `policy.allowlist_cidrs`, and `crowdsec` label for CrowdSec allow-lists
 when `crowdsec.import_allowlists` is on: LAPI `GET /v1/allowlists?with_content=true` (watcher JWT,
 per the swagger); lists returned without `items` are fetched by name. Expired and invalid items are
-skipped. The daemon refreshes at startup and hourly, swapping the entries of a
+skipped (CrowdSec sends `0001-01-01T00:00:00Z`, Go's zero time, for "never expires"; verified live
+with 1.8.1). The daemon refreshes at startup and hourly, swapping the entries of a
 `RefreshableAllowList` (an `IpMatcher` shared by grouper, pipeline, policy and actuator), so no
 service needs rebuilding.
 IPv4-mapped IPv6 addresses (`::ffff:a.b.c.d`) are unwrapped before matching.
