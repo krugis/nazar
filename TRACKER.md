@@ -28,10 +28,20 @@ pipeline testing on this host; not good enough as the default.
 2.9 GB, re-pulled `granite4:micro-h`: **22/22, 0% invalid, ~47 s, 0 OOM kills**, host never below
 630 MB available. The 1B was removed; the 3B is used for the remaining live tests.
 
+**Oct 26, dry runs on live traffic:** 42 + 15 incidents (>1,000 real SSH attack alerts; the
+500-alert batch limit truncated as designed), **0 CrowdSec changes**. Allow-list verified live:
+an attack from the admin IP (3 SSH scenarios + `http-sensitive-files`) became one incident, skipped
+as allow-listed, no model call. A controlled attack from a second host with a prompt-injection user
+agent was rated malicious/high/0.95 (not fooled); the model wrongly said "not banned by CrowdSec"
+and the policy's R5 used the real data. Two more live findings fixed: llama.cpp's prompt cache
+grew Ollama's memory per incident (disable with `LLAMA_ARG_CACHE_RAM=0`,
+`deploy/ollama-nazar.conf`), and Ollama outages turned queued incidents into `unknown`
+(now requeued with backoff). Open: the model sometimes writes `proposed_duration` in a format the
+schema rejects (retry recovers); consider normalising (e.g. "4 hours" → `4h`).
+
 Next steps, in order:
 1. ~~Model decision~~ done: `granite4:micro-h` with a 2.9 GB Ollama cap.
-2. Dry run with controlled attacks from a second server (SSH brute force + HTTP probing with a
-   prompt-injection user agent), then `nazar explain` one incident.
+2. ~~Dry run with controlled attacks~~ done (Oct 26).
 3. Active-mode test (P-9): delete CrowdSec's own ban for the attacker, reset Nazar's database,
    `mode: active`, run once, check `cscli decisions list` for `nazar/ai-triage`, approve if needed,
    `nazar rollback`. No bouncer is installed, so nothing is actually blocked.
@@ -68,7 +78,7 @@ Next steps, in order:
 | F-16 | App composition + Pipeline + Daemon (collect, triage, housekeeping) | [11](docs/lld/11-daemon.md) | done | |
 | F-17 | CLI skeleton + `run [--dry-run] [--once]`, `config check`, `status` | [12](docs/lld/12-cli.md) | done | |
 | F-18 | `test-model` + ~20 labelled eval incidents | [07](docs/lld/07-analyst.md#evaluation-nazar-test-model) | done | 22 cases |
-| F-19 | M1 acceptance on a live CrowdSec + Ollama (dry-run, valid verdicts, no CrowdSec changes) | DESIGN §9 | wip | Oct 25: dry run on 145 real alerts (17 incidents) made **0** CrowdSec changes; grouping and policy correct. Valid-verdict part pending: 8/17 fell back to `unknown` because Ollama hit the host's memory cap (see Live validation log). LAPI `include_capi`/`limit`/sort order not yet checked |
+| F-19 | M1 acceptance on a live CrowdSec + Ollama (dry-run, valid verdicts, no CrowdSec changes) | DESIGN §9 | done | Oct 25: dry run on 145 real alerts (17 incidents) made **0** CrowdSec changes; grouping and policy correct. Valid-verdict part pending: 8/17 fell back to `unknown` because Ollama hit the host's memory cap (see Live validation log). LAPI `include_capi`/`limit`/sort order not yet checked |
 
 ## M2: Policy and enforcement (v0.2)
 
