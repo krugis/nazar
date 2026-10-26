@@ -25,6 +25,7 @@ MAX_PIPELINE_FAILURES = 3
 MAX_MODEL_RETRIES = 5
 MODEL_RETRY_BASE_S = 10.0
 HOUSEKEEPING_SECONDS = 60
+SHUTDOWN_GRACE_S = 60.0
 RETENTION_EVERY = timedelta(hours=24)
 HEALTH_KEY = "health"
 SUMMARY_KEY = "summary.last_sent"
@@ -77,9 +78,10 @@ class Daemon:
         log.info("nazar_stopping")
         for task in tasks:
             task.cancel()
-        # Let the incident in progress finish, bounded by the model timeout.
+        # Let the incident in progress finish, but stay inside systemd's TimeoutStopSec (90 s);
+        # an interrupted incident stays pending and is triaged after the restart.
         try:
-            await asyncio.wait_for(triage, timeout=cfg.analyst.timeout_seconds * 2 + 5)
+            await asyncio.wait_for(triage, timeout=SHUTDOWN_GRACE_S)
         except TimeoutError:
             triage.cancel()
         await asyncio.gather(*tasks, triage, return_exceptions=True)

@@ -77,8 +77,9 @@ that time the summary waits for the next day instead of firing immediately.
 
 ### Shutdown
 
-`SIGTERM`/`SIGINT` → stop accepting new work, let the current incident finish (≤ analyst timeout),
-cancel tasks, close clients and DB, exit 0. systemd `TimeoutStopSec=90`.
+`SIGTERM`/`SIGINT` → stop accepting new work, let the current incident finish for at most 60 s
+(inside systemd's `TimeoutStopSec=90`; an interrupted incident stays pending), cancel tasks, close
+clients and DB, exit 0.
 
 ## Dry-run reports
 
