@@ -42,9 +42,7 @@ schema rejects (retry recovers); consider normalising (e.g. "4 hours" → `4h`).
 Next steps, in order:
 1. ~~Model decision~~ done: `granite4:micro-h` with a 2.9 GB Ollama cap.
 2. ~~Dry run with controlled attacks~~ done (Oct 26).
-3. Active-mode test (P-9): delete CrowdSec's own ban for the attacker, reset Nazar's database,
-   `mode: active`, run once, check `cscli decisions list` for `nazar/ai-triage`, approve if needed,
-   `nazar rollback`. No bouncer is installed, so nothing is actually blocked.
+3. ~~Active-mode test (P-9)~~ done (Oct 26).
 4. Start the daemon (`systemctl start nazar`), watch `journalctl -u nazar`, `nazar report`.
 5. Later, on a dedicated VM: K-6 e2e stack, K-7 timed clean install, 4B/8B model candidates.
 
@@ -92,7 +90,7 @@ Next steps, in order:
 | P-6 | Optional GeoIP provider | [06](docs/lld/06-enrich.md#geoip) | done | config `enrich.geoip_country_db` / `geoip_asn_db`; untested against real .mmdb files |
 | P-7 | `active` mode wired in the pipeline | [11](docs/lld/11-daemon.md) | done | approval requests are stored; notifications and approve/reject come in M3 |
 | P-8 | CLI: `incidents`, `explain`, `rollback` | [12](docs/lld/12-cli.md) | done | |
-| P-9 | M2 acceptance: allow-listed never banned (tests), decisions visible in `cscli decisions list`, removable by rollback | DESIGN §9 | blocked | test part done (property tests + active-mode e2e); live part needs the test VM: check payload fields, custom origin, `cscli decisions list` output |
+| P-9 | M2 acceptance: allow-listed never banned (tests), decisions visible in `cscli decisions list`, removable by rollback | DESIGN §9 | done | Oct 26 live (CrowdSec 1.8.1, detect-only): controlled attack → auto ban (R7 + R8 corroboration) → `cscli decisions list` shows `nazar/ai-triage`, origin `cscli`, 4h, Nazar alert with incident ID → `nazar rollback --incident` removed it (0 left), audited. Allow-listed admin IP was skipped live. Found and fixed: CrowdSec 1.8 marks expired/deleted decisions in alerts with negative `duration` (no `until`) |
 | P-10 | Import CrowdSec allow-lists (`crowdsec.import_allowlists`, LAPI `GET /v1/allowlists`, hourly refresh) | [05](docs/lld/05-prefilter.md#allowlist) | done | watcher JWT per the swagger; `with_content` param to verify live |
 
 ## M3: Human in the loop (v0.3)
