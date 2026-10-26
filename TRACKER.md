@@ -47,9 +47,11 @@ Next steps, in order:
    no sandbox denials; Nazar itself uses ~32 MB, collects every 30 s and triages ~1 incident/min on
    2 vCPU (enough for this host's ~10–15 new attacker IPs/hour). Fixed live: report lines were held
    in Python's stdout buffer under systemd; shutdown grace now 60 s, inside `TimeoutStopSec`.
-   Follow-ups found: `nazar report` counts model outages as "invalid output" (show them
-   separately); normalise near-miss `proposed_duration` values; optional llama.cpp backend
-   (`analyst.backend`) for lean hosts, since Ollama bundles ~2 GB of unused GPU libraries.
+   Follow-ups: ~~`nazar report` counts model outages as "invalid output"~~ fixed (schema
+   migration 2, `verdicts.error`; first live migration v1→v2 on real data went fine: the live
+   report changed from "24.4% invalid" to "0.0% invalid, plus 21 not triaged: model
+   unavailable"); ~~normalise near-miss `proposed_duration`~~ fixed; **open:** optional llama.cpp
+   backend (`analyst.backend`) for lean hosts, since Ollama bundles ~2 GB of unused GPU libraries.
 5. Later, on a dedicated VM: K-6 e2e stack, K-7 timed clean install, 4B/8B model candidates.
 
 ## Phase 0: Design
