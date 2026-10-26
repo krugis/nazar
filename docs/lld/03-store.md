@@ -141,6 +141,16 @@ BEGIN SELECT RAISE(ABORT, 'audit_log is append-only'); END;
 Note: `audit_log` has no foreign keys on purpose, so it outlives deleted incidents until its own
 retention. Deletes are allowed only by the retention job.
 
+## Schema (migration 2)
+
+```sql
+ALTER TABLE verdicts ADD COLUMN error TEXT;   -- 'model_unavailable' | 'invalid_output' | NULL
+```
+
+Why a model verdict is a fallback, so reports can tell a model outage from a bad answer. Rows
+written before v2 have `NULL`; `VerdictRecord.model_unavailable` classifies them by shape (an
+outage fallback made one attempt and has no latency; an invalid answer always took two).
+
 ## Repositories (public API)
 
 | Class | Key methods |

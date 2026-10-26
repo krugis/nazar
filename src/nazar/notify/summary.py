@@ -27,7 +27,8 @@ def build_summary(store: Store, since: datetime, now: datetime) -> dict[str, Any
         key=lambda v: (Severity(v.record.verdict.severity).rank, v.record.verdict.confidence),
         reverse=True,
     )[:TOP_N]
-    invalid = sum(not v.record.valid_output for v in model_verdicts)
+    invalid = sum(v.record.invalid_output for v in model_verdicts)
+    unavailable = sum(v.record.model_unavailable for v in model_verdicts)
     return {
         "from": to_iso(since),
         "to": to_iso(now),
@@ -45,6 +46,7 @@ def build_summary(store: Store, since: datetime, now: datetime) -> dict[str, Any
         "invalid_output_pct": round(100.0 * invalid / len(model_verdicts), 1)
         if model_verdicts
         else 0.0,
+        "model_unavailable": unavailable,
         "top": [
             {
                 "incident_id": v.incident_id,
@@ -71,7 +73,12 @@ def render_summary(s: dict[str, Any]) -> str:
         f"Would be (active mode): {_counts(s['intended_outcomes'])}",
         f"Bans applied: {s['applied']}, rolled back: {s['rolled_back']}",
         f"Approvals: {_counts(s['approvals'])}",
-        f"Model invalid output: {s['invalid_output_pct']}%",
+        f"Model invalid output: {s['invalid_output_pct']}%"
+        + (
+            f" (plus {s['model_unavailable']} not triaged: model unavailable)"
+            if s.get("model_unavailable")
+            else ""
+        ),
     ]
     if s["skipped"]:
         lines.append(f"Not sent to the model: {_counts(s['skipped'])}")

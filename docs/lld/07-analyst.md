@@ -93,8 +93,12 @@ as an assistant message and a user message:
    after `<think>`.
 2. Strip Markdown code fences.
 3. Find the first balanced top-level `{…}` (string-aware brace scan). None → `ParseError("no JSON object")`.
-4. `json.loads`, then `Verdict.model_validate` (extra fields rejected).
-5. Raise `ParseError` with a short, safe message (pydantic error locations only, no input echo).
+4. `json.loads`; then near-miss `proposed_duration` values are normalised ("4 hours" → `4h`,
+   "30 min" → `30m`, "1d" → `24h`, Go-style "4h0m0s" → `4h`, "none"/"0" → none). Anything unclear
+   (e.g. "permanent") is left as is so validation rejects it and the repair retry runs. Found live:
+   the default model occasionally wrote such values, costing a second model call (~1 min on CPU).
+5. `Verdict.model_validate` (extra fields rejected).
+6. Raise `ParseError` with a short, safe message (pydantic error locations only, no input echo).
 
 ## Analyst.triage
 

@@ -111,6 +111,13 @@ CREATE TRIGGER audit_log_no_update BEFORE UPDATE ON audit_log
 BEGIN SELECT RAISE(ABORT, 'audit_log is append-only'); END;
 """
 
+# Why a model verdict is a fallback: 'model_unavailable' (backend down) or 'invalid_output'
+# (answer failed validation twice). NULL for good verdicts and for rows written before v2.
+_V2 = """
+ALTER TABLE verdicts ADD COLUMN error TEXT;
+"""
+
 MIGRATIONS: list[tuple[int, str]] = [
     (1, _V1),
+    (2, _V2),
 ]

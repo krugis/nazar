@@ -32,6 +32,7 @@ class EvalReport:
     verdict_correct: int = 0
     action_correct: int = 0
     invalid: int = 0
+    unavailable: int = 0
     retried: int = 0
     latencies_ms: list[int] = field(default_factory=list)
     failures: list[dict[str, Any]] = field(default_factory=list)
@@ -53,6 +54,7 @@ class EvalReport:
             "verdict_accuracy_pct": self._pct(self.verdict_correct),
             "action_agreement_pct": self._pct(self.action_correct),
             "invalid_output_pct": self._pct(self.invalid),
+            "model_unavailable_pct": self._pct(self.unavailable),
             "retry_pct": self._pct(self.retried),
             "latency_ms_p50": self._latency(0.5),
             "latency_ms_p95": self._latency(0.95),
@@ -93,7 +95,9 @@ async def run_eval(analyst: Analyst, cases: Sequence[EvalCase]) -> EvalReport:
     for case in cases:
         result = await analyst.triage(case.incident)
         report.cases += 1
-        if not result.valid_output:
+        if result.model_unavailable:
+            report.unavailable += 1
+        elif not result.valid_output:
             report.invalid += 1
         if result.attempts > 1:
             report.retried += 1

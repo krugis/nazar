@@ -10,6 +10,9 @@ from pydantic import ValidationError
 from nazar.models import Verdict
 
 _THINK_BLOCK = re.compile(r"<think>.*?</think>", re.IGNORECASE | re.DOTALL)
+_WORD_DURATION = re.compile(r"^(\d+)\s*(m|mins?|minutes?|h|hrs?|hours?|d|days?)$")
+_GO_DURATION = re.compile(r"^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$")
+_NO_DURATION = {"", "none", "null", "n/a", "na", "0", "0m", "0h", "0s"}
 _FENCE = re.compile(r"```[a-zA-Z]*")
 
 
@@ -27,6 +30,33 @@ def strip_reasoning(text: str) -> str:
         # Unterminated reasoning: nothing after it can be trusted as the answer.
         text = text[: lower.find("<think>")]
     return text
+
+
+def normalize_duration(value: object) -> object:
+    """Rewrite near-miss durations ("4 hours", "1d", "4h0m0s") to the ``^\\d+(m|h)$`` form.
+
+    Anything not clearly a duration is returned unchanged, so validation still rejects it and
+    the analyst asks the model again. Days become hours; the policy clamps the length anyway.
+    """
+    if not isinstance(value, str):
+        return value
+    text = value.strip().lower()
+    if text in _NO_DURATION:
+        return ""
+    match = _WORD_DURATION.match(text)
+    if match:
+        number, unit = int(match.group(1)), match.group(2)[0]
+        if unit == "m":
+            return f"{number}m"
+        return f"{number * 24}h" if unit == "d" else f"{number}h"
+    match = _GO_DURATION.match(text)
+    if match and any(match.groups()):
+        hours, minutes, seconds = (int(g or 0) for g in match.groups())
+        total = hours * 60 + minutes + (1 if seconds else 0)
+        if total == 0:
+            return ""
+        return f"{total // 60}h" if total % 60 == 0 else f"{total}m"
+    return value
 
 
 def first_json_object(text: str) -> str | None:
@@ -66,6 +96,8 @@ def parse_verdict(text: str) -> Verdict:
         raise ParseError(f"invalid JSON at position {exc.pos}") from None
     if not isinstance(data, dict):
         raise ParseError("top-level value is not an object")
+    if "proposed_duration" in data:
+        data["proposed_duration"] = normalize_duration(data["proposed_duration"])
     try:
         return Verdict.model_validate(data)
     except ValidationError as exc:

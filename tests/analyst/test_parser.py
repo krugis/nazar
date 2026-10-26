@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from nazar.analyst import ParseError, parse_verdict
@@ -42,3 +44,38 @@ def test_first_json_object_string_aware() -> None:
     assert first_json_object(text) == '{"a": "}{\\"", "b": {"c": 1}}'
     assert first_json_object("no braces") is None
     assert first_json_object('{"unclosed": 1') is None
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("4h", "4h"),
+        ("30m", "30m"),
+        ("4 hours", "4h"),
+        ("4 Hours", "4h"),
+        ("1 hour", "1h"),
+        ("2 hrs", "2h"),
+        ("30 min", "30m"),
+        ("45 minutes", "45m"),
+        ("1d", "24h"),
+        ("2 days", "48h"),
+        ("4H", "4h"),
+        ("4h0m0s", "4h"),
+        ("1h30m", "90m"),
+        ("3h59m59s", "4h"),  # seconds round up to the next minute
+        ("none", None),
+        ("N/A", None),
+        ("0", None),
+        ("", None),
+    ],
+)
+def test_near_miss_durations_normalised(raw: str, expected: str | None) -> None:
+    text = (OUTPUTS / "valid_clean.txt").read_text().replace('"4h"', json.dumps(raw))
+    assert parse_verdict(text).proposed_duration == expected
+
+
+@pytest.mark.parametrize("raw", ["permanent", "four hours", "4.5h", "-1h", "1w", "4 h 30 m"])
+def test_unclear_durations_still_rejected(raw: str) -> None:
+    text = (OUTPUTS / "valid_clean.txt").read_text().replace('"4h"', json.dumps(raw))
+    with pytest.raises(ParseError):
+        parse_verdict(text)

@@ -22,8 +22,23 @@ def test_summary_counts(store: Store, clock: FrozenClock) -> None:
     vid = store.verdicts.add(
         inc.id, VerdictRecord(good, "m", "triage-v1", input={"source_ip": "198.51.100.7"})
     )
+    unknown = Verdict.unknown("x")
+    # an invalid answer (two attempts), a recorded outage, and a pre-v2 outage row (no error
+    # value, one attempt, no latency)
     store.verdicts.add(
-        inc.id, VerdictRecord(Verdict.unknown("x"), "m", "triage-v1", valid_output=False)
+        inc.id,
+        VerdictRecord(
+            unknown, "m", "triage-v1", valid_output=False, attempts=2, latency_ms=900,
+            error="invalid_output",
+        ),
+    )  # fmt: skip
+    store.verdicts.add(
+        inc.id,
+        VerdictRecord(unknown, "m", "triage-v1", valid_output=False, attempts=1,
+                      error="model_unavailable"),
+    )  # fmt: skip
+    store.verdicts.add(
+        inc.id, VerdictRecord(unknown, "m", "triage-v1", valid_output=False, attempts=1)
     )
     d = Decision(
         action=Action.BAN, outcome=Outcome.AUTO, intended_outcome=Outcome.AUTO, duration="4h"
@@ -35,9 +50,11 @@ def test_summary_counts(store: Store, clock: FrozenClock) -> None:
         VerdictRecord(Verdict.unknown("x"), "none", "none", skipped_reason="allowlisted:config"),
     )
     s = build_summary(store, clock.now() - timedelta(hours=24), clock.now())
-    assert s["incidents"] == 2 and s["model_triaged"] == 2
+    assert s["incidents"] == 2 and s["model_triaged"] == 4
     assert s["applied"] == 1 and s["outcomes"] == {"auto": 1}
-    assert s["invalid_output_pct"] == 50.0
+    assert s["invalid_output_pct"] == 25.0  # 1 of 4 model verdicts
+    assert s["model_unavailable"] == 2
     assert s["skipped"] == {"allowlisted:config": 1}
     text = render_summary(s)
     assert "Bans applied: 1" in text and "Incidents: 2" in text
+    assert "plus 2 not triaged: model unavailable" in text

@@ -11,6 +11,8 @@ from nazar.store.db import Database
 from nazar.store.incidents import EventRepo, EventRow, IncidentRepo, IncidentRow
 from nazar.store.state import AuditLog, CtiCacheRepo, KvRepo
 from nazar.store.triage import (
+    ERROR_INVALID_OUTPUT,
+    ERROR_MODEL_UNAVAILABLE,
     ApprovalRepo,
     DecisionRepo,
     DecisionRow,
@@ -20,6 +22,8 @@ from nazar.store.triage import (
 )
 
 __all__ = [
+    "ERROR_INVALID_OUTPUT",
+    "ERROR_MODEL_UNAVAILABLE",
     "Database",
     "DecisionRow",
     "EventRow",

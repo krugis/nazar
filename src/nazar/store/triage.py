@@ -18,6 +18,10 @@ def _ts(value: str | None) -> datetime | None:
     return from_iso(value) if value else None
 
 
+ERROR_MODEL_UNAVAILABLE = "model_unavailable"
+ERROR_INVALID_OUTPUT = "invalid_output"
+
+
 @dataclass(frozen=True)
 class VerdictRecord:
     """What to store for one triage attempt (model call or skip)."""
@@ -30,6 +34,25 @@ class VerdictRecord:
     attempts: int = 0
     latency_ms: int | None = None
     skipped_reason: str | None = None
+    error: str | None = None
+    """``model_unavailable`` or ``invalid_output`` when the verdict is a fallback."""
+
+    @property
+    def model_unavailable(self) -> bool:
+        if self.error is not None:
+            return self.error == ERROR_MODEL_UNAVAILABLE
+        # Rows written before schema v2: an outage fallback made one attempt and has no latency;
+        # an invalid answer always took two attempts.
+        return (
+            not self.valid_output
+            and self.skipped_reason is None
+            and self.attempts <= 1
+            and self.latency_ms is None
+        )
+
+    @property
+    def invalid_output(self) -> bool:
+        return not self.valid_output and self.skipped_reason is None and not self.model_unavailable
 
 
 @dataclass
@@ -50,7 +73,8 @@ class VerdictRepo:
         cur = self._db.execute(
             "INSERT INTO verdicts (incident_id, created_at, model, prompt_version, verdict,"
             " severity, confidence, proposed_action, body, input, valid_output, attempts,"
-            " latency_ms, skipped_reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            " latency_ms, skipped_reason, error)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 incident_id,
                 to_iso(self._clock.now()),
@@ -66,6 +90,7 @@ class VerdictRepo:
                 rec.attempts,
                 rec.latency_ms,
                 rec.skipped_reason,
+                rec.error,
             ),
         )
         assert cur.lastrowid is not None
@@ -86,6 +111,7 @@ class VerdictRepo:
                 attempts=row["attempts"],
                 latency_ms=row["latency_ms"],
                 skipped_reason=row["skipped_reason"],
+                error=row["error"],
             ),
         )
 

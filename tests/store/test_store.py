@@ -151,3 +151,29 @@ def test_approval_ids_are_cli_safe() -> None:
     ids = {new_approval_id() for _ in range(2000)}
     assert len(ids) == 2000
     assert all(len(i) == 11 and i.isalnum() for i in ids)
+
+
+def test_upgrade_v1_database_keeps_data(
+    tmp_path: Path, clock: FrozenClock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from nazar.store import db as db_mod
+
+    monkeypatch.setattr(db_mod, "MIGRATIONS", MIGRATIONS[:1])
+    old = Store(tmp_path / "v1.db", clock)
+    assert old.db.schema_version == 1
+    inc = old.incidents.create("203.0.113.45", clock.now())
+    old.db.execute(
+        "INSERT INTO verdicts (incident_id, created_at, model, prompt_version, verdict, severity,"
+        " confidence, proposed_action, body, input, valid_output, attempts, latency_ms,"
+        " skipped_reason) VALUES (?, '2026-10-25T17:00:00Z', 'm', 'v', 'unknown', 'low', 0,"
+        " 'none', ?, '{}', 0, 1, NULL, NULL)",
+        (inc.id, Verdict.unknown("model unavailable").model_dump_json()),
+    )
+    old.close()
+    monkeypatch.setattr(db_mod, "MIGRATIONS", MIGRATIONS)
+    new = Store(tmp_path / "v1.db", clock)
+    assert new.db.schema_version == MIGRATIONS[-1][0]
+    rows = new.verdicts.for_incident(inc.id)
+    assert len(rows) == 1 and rows[0].record.error is None
+    assert rows[0].record.model_unavailable  # classified from the pre-v2 row shape
+    new.close()

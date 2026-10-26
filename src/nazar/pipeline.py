@@ -18,7 +18,14 @@ from nazar.enrich import Enricher
 from nazar.models import Action, Actor, Decision, Incident, Outcome, Severity, Verdict
 from nazar.notify import AutoActionNote, FanoutNotifier, IncidentNote
 from nazar.policy import PolicyInput, evaluate
-from nazar.store import EventRow, IncidentRow, Store, VerdictRecord
+from nazar.store import (
+    ERROR_INVALID_OUTPUT,
+    ERROR_MODEL_UNAVAILABLE,
+    EventRow,
+    IncidentRow,
+    Store,
+    VerdictRecord,
+)
 
 log = get_logger(__name__)
 
@@ -116,6 +123,13 @@ class Pipeline:
             valid_output=triage.valid_output,
             attempts=triage.attempts,
             latency_ms=triage.latency_ms,
+            error=(
+                ERROR_MODEL_UNAVAILABLE
+                if triage.model_unavailable
+                else ERROR_INVALID_OUTPUT
+                if not triage.valid_output
+                else None
+            ),
         )
         decision, decision_id = self._decide_and_store(incident, record, label)
         applied, approval_id = await self._carry_out(
