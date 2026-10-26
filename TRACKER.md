@@ -43,7 +43,13 @@ Next steps, in order:
 1. ~~Model decision~~ done: `granite4:micro-h` with a 2.9 GB Ollama cap.
 2. ~~Dry run with controlled attacks~~ done (Oct 26).
 3. ~~Active-mode test (P-9)~~ done (Oct 26).
-4. Start the daemon (`systemctl start nazar`), watch `journalctl -u nazar`, `nazar report`.
+4. ~~Start the daemon~~ done (Oct 26): `nazar.service` runs in dry-run under the hardened unit with
+   no sandbox denials; Nazar itself uses ~32 MB, collects every 30 s and triages ~1 incident/min on
+   2 vCPU (enough for this host's ~10–15 new attacker IPs/hour). Fixed live: report lines were held
+   in Python's stdout buffer under systemd; shutdown grace now 60 s, inside `TimeoutStopSec`.
+   Follow-ups found: `nazar report` counts model outages as "invalid output" (show them
+   separately); normalise near-miss `proposed_duration` values; optional llama.cpp backend
+   (`analyst.backend`) for lean hosts, since Ollama bundles ~2 GB of unused GPU libraries.
 5. Later, on a dedicated VM: K-6 e2e stack, K-7 timed clean install, 4B/8B model candidates.
 
 ## Phase 0: Design
