@@ -26,9 +26,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/krugis/nazar-sec-nazar"
-Documentation = "https://github.com/krugis/nazar-sec-nazar/tree/main/docs"
-Issues = "https://github.com/krugis/nazar-sec-nazar/issues"
+Homepage = "https://github.com/krugis/nazar"
+Documentation = "https://github.com/krugis/nazar/tree/main/docs"
+Issues = "https://github.com/krugis/nazar/issues"
 
 [project.optional-dependencies]
 geoip = ["geoip2>=4.8"]

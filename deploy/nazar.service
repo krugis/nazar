@@ -1,7 +1,7 @@
 # Nazar: AI triage for CrowdSec. Hardened unit, see docs/lld/13-deploy.md.
 [Unit]
 Description=Nazar AI triage for CrowdSec
-Documentation=https://github.com/krugis/nazar-sec-nazar
+Documentation=https://github.com/krugis/nazar
 After=network-online.target crowdsec.service ollama.service
 Wants=network-online.target
 

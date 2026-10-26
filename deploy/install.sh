@@ -3,7 +3,7 @@
 #
 #   sudo sh install.sh                    # from PyPI (nazar-sec)
 #   sudo sh install.sh --from /path/src   # from a source checkout or a wheel
-#   sudo sh install.sh --from 'git+https://github.com/krugis/nazar-sec-nazar'
+#   sudo sh install.sh --from 'git+https://github.com/krugis/nazar'
 #   sudo sh install.sh --python /opt/python/bin/python3.12   # a specific interpreter
 #
 # It never starts Nazar in active mode: review the config and try a dry run first.

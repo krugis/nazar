@@ -18,7 +18,7 @@ RUN python -m venv /opt/nazar \
 FROM python:3.12-slim-bookworm
 LABEL org.opencontainers.image.title="nazar" \
       org.opencontainers.image.description="AI-assisted protection for Linux servers, built on CrowdSec" \
-      org.opencontainers.image.source="https://github.com/krugis/nazar-sec-nazar" \
+      org.opencontainers.image.source="https://github.com/krugis/nazar" \
       org.opencontainers.image.licenses="Apache-2.0"
 RUN groupadd --system --gid 10001 nazar \
  && useradd --system --uid 10001 --gid nazar --home-dir /var/lib/nazar --shell /usr/sbin/nologin nazar \

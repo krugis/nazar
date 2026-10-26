@@ -5,8 +5,9 @@
 > *Nazar* is the Turkish name for the blue evil-eye charm that has watched over doorways for centuries. This project is a modern nazar for your servers: it watches, recognizes the evil eye, and wards it off.
 
 > **Status: pre-alpha.** v1 features (triage, policy, CrowdSec decisions, Telegram approvals) are
-> implemented and tested against recorded API responses; validation on live CrowdSec installs is in
-> progress. Run it in dry-run mode first. See [DESIGN.md](DESIGN.md) and [TRACKER.md](TRACKER.md).
+> implemented, tested, and validated live against CrowdSec 1.8 and real internet attacks
+> (dry run, active mode and rollback). Run it in dry-run mode first. See [DESIGN.md](DESIGN.md)
+> and [TRACKER.md](TRACKER.md).
 
 ---
 
@@ -37,10 +38,10 @@ The model runs **entirely on your server**. Nazar needs no GPU and no cloud LLM,
 
 ## Features
 
-### v1: AI triage (implemented, in validation)
+### v1: AI triage (implemented, validated live)
 - Reads alerts from the CrowdSec Local API
 - Enrichment: CrowdSec CTI reputation, GeoIP/ASN, local history for the IP
-- Local triage with a small, non-reasoning model ([IBM Granite 4.0 Micro-H](https://ollama.com/library/granite4), 3B, Q4_K_M, Apache-2.0) through [Ollama](https://ollama.com): 21/22 on Nazar's labelled incidents, ~50 s per incident on 2 vCPU ([model comparison](docs/models.md))
+- Local triage with a small, non-reasoning model ([IBM Granite 4.0 Micro-H](https://ollama.com/library/granite4), 3B, Q4_K_M, Apache-2.0) through [Ollama](https://ollama.com): 21/22 and 22/22 in two runs on Nazar's labelled incidents, ~50 s per incident on 2 vCPU ([model comparison](docs/models.md))
 - Policy engine with allow-lists, a maximum ban duration and approval tiers
 - Actions applied as CrowdSec decisions, tagged and auditable
 - Telegram notifications with **Approve / Reject** buttons
@@ -65,27 +66,86 @@ Nazar is a security tool, so it must not become an attack surface.
 
 ## Requirements
 
-- Linux (Debian/Ubuntu or RHEL family), x86_64 or arm64
-- [CrowdSec](https://docs.crowdsec.net/) Security Engine with at least one bouncer
+- Linux (Debian/Ubuntu or RHEL family), x86_64 or arm64, with systemd
+- [CrowdSec](https://docs.crowdsec.net/) Security Engine (tested with 1.8) and, to actually block,
+  at least one bouncer
 - [Ollama](https://ollama.com)
-- Python 3.11+
-- 4 GB RAM or more (the model needs about 2.5 GB; see [docs/models.md](docs/models.md) for tight hosts)
+- Python 3.11+ with `venv` (Ubuntu 24.04 ships 3.12; see step 3 for older systems)
+- 4 GB RAM or more: give Ollama about 2.9 GB for the default model ([details](docs/models.md))
+- About 5 GB of free disk (Ollama, the 1.9 GB model, Nazar)
 
-## Quick start
+## Installation
+
+The steps below take about 15 minutes on a fresh server. Nazar starts in **dry-run** mode: it
+triages and reports, but changes nothing in CrowdSec until you switch it to active.
+
+**1. CrowdSec and a bouncer.** Follow the [CrowdSec install guide](https://docs.crowdsec.net/u/getting_started/intro),
+for example on Debian/Ubuntu:
 
 ```bash
-# 1. Install CrowdSec and a bouncer (see the CrowdSec docs), and Ollama
-# 2. Pull the model
-ollama pull granite4:micro-h
-# 3. Install Nazar (creates the nazar user, config, secrets, CrowdSec machine, systemd unit)
-git clone https://github.com/krugis/nazar-sec-nazar && cd nazar-sec-nazar
-sudo sh deploy/install.sh --from .
-# 4. Add your own IPs to policy.allowlist_cidrs, then check
-sudo nano /etc/nazar/config.yaml && sudo nazar config check
-# 5. Dry run first: triage and report, no changes to CrowdSec
-sudo -u nazar nazar run --dry-run --once
-sudo systemctl start nazar
+curl -s https://install.crowdsec.net | sudo sh
 ```
+
+```bash
+sudo apt install -y crowdsec crowdsec-firewall-bouncer-nftables
+```
+
+**2. Ollama and the model.** Install Ollama, apply Nazar's recommended Ollama setting (it disables
+a prompt cache that otherwise grows memory with every incident), and pull the model:
+
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+```
+
+```bash
+git clone https://github.com/krugis/nazar && cd nazar
+```
+
+```bash
+sudo mkdir -p /etc/systemd/system/ollama.service.d && sudo cp deploy/ollama-nazar.conf /etc/systemd/system/ollama.service.d/nazar.conf && sudo systemctl daemon-reload && sudo systemctl restart ollama
+```
+
+```bash
+ollama pull granite4:micro-h
+```
+
+**3. Nazar.** The installer creates the `nazar` system user, installs into `/opt/nazar`, writes
+`/etc/nazar/config.yaml` and `/etc/nazar/secrets.env`, registers a CrowdSec machine, checks
+CrowdSec and Ollama, runs one test incident through the model, and installs (but does not start)
+`nazar.service`:
+
+```bash
+sudo sh deploy/install.sh --from .
+```
+
+If your system Python is older than 3.11 (e.g. Debian 11), install a newer one system-wide and pass
+it with `--python` ([details](docs/install.md)).
+
+**4. Configure.** Add your own addresses (office, VPN, monitoring, CI) to `policy.allowlist_cidrs`
+and list your services in `host_context.exposed_services`, then check:
+
+```bash
+sudo nano /etc/nazar/config.yaml && sudo nazar config check
+```
+
+**5. Dry run.** Triage the current CrowdSec alerts once and read the report, then run Nazar as a
+service:
+
+```bash
+sudo -u nazar nazar run --dry-run --once
+```
+
+```bash
+sudo systemctl start nazar && journalctl -u nazar -f
+```
+
+**6. Go active** when the dry-run results look right: set `mode: active` in the config and
+`sudo systemctl restart nazar`. Every ban Nazar creates appears in `sudo cscli decisions list`
+with the reason `nazar/ai-triage` and can be removed with `sudo nazar rollback --since 1h`.
+
+To **upgrade**, `git pull` and run `sudo sh deploy/install.sh --from .` again: it keeps your config
+and secrets and migrates the database. Optional Telegram approvals, CrowdSec CTI, GeoIP, Docker and
+uninstall steps are in [docs/install.md](docs/install.md).
 
 Day-to-day commands:
 
@@ -104,8 +164,8 @@ Documentation: [install](docs/install.md) · [configuration](docs/configuration.
 
 ## Roadmap
 
-- [x] v0.1: alert ingestion, triage, dry-run reports (live validation pending)
-- [x] v0.2: policy engine and CrowdSec decisions (live validation pending)
+- [x] v0.1: alert ingestion, triage, dry-run reports (validated live)
+- [x] v0.2: policy engine and CrowdSec decisions (validated live: auto ban and rollback)
 - [x] v0.3: Telegram approvals and daily summary
 - [ ] v0.4: packaging (install script and docs done; PyPI release, .deb, Docker image)
 - [ ] v1.0: stable v1
