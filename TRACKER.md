@@ -52,7 +52,11 @@ Next steps, in order:
    report changed from "24.4% invalid" to "0.0% invalid, plus 21 not triaged: model
    unavailable"); ~~normalise near-miss `proposed_duration`~~ fixed; **open:** optional llama.cpp
    backend (`analyst.backend`) for lean hosts, since Ollama bundles ~2 GB of unused GPU libraries.
-5. Later, on a dedicated VM: K-6 e2e stack, K-7 timed clean install, 4B/8B model candidates.
+5. ~~Enforcement~~ done (Oct 26): nftables bouncer installed after allow-listing the owner's
+   ranges in CrowdSec and Nazar, with a 10-minute auto-undo during the switch; owner confirmed
+   access. Nazar switched to **active** mode. Found and fixed live: CrowdSec allow-list items
+   without expiration come back with Go's zero time and were imported as expired (0 entries).
+6. Later, on a dedicated VM: K-6 e2e stack, K-7 timed clean install, 4B/8B model candidates.
 
 ## Phase 0: Design
 
