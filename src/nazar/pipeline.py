@@ -11,6 +11,7 @@ from nazar.analyst import Analyst
 from nazar.approvals import ApprovalService
 from nazar.config import Config
 from nazar.core.clock import Clock
+from nazar.core.errors import ModelUnavailableError
 from nazar.core.log import get_logger
 from nazar.core.net import IpMatcher
 from nazar.enrich import Enricher
@@ -80,8 +81,13 @@ class Pipeline:
         self._enricher = enricher
         self._analyst = analyst
 
-    async def process(self, incident_id: str) -> PipelineResult | None:
-        """Triage one incident. Returns None if it no longer exists."""
+    async def process(
+        self, incident_id: str, *, retry_exhausted: bool = False
+    ) -> PipelineResult | None:
+        """Triage one incident. Returns None if it no longer exists.
+
+        Raises ``ModelUnavailableError`` when the model backend is down, unless
+        ``retry_exhausted`` is set, in which case the ``unknown`` fallback is recorded."""
         store = self._store
         row = store.incidents.get(incident_id)
         if row is None:
@@ -99,6 +105,9 @@ class Pipeline:
 
         incident.enrichment = await self._enricher.enrich(incident, events)
         triage = await self._analyst.triage(incident)
+        if triage.model_unavailable and not retry_exhausted:
+            # Nothing is recorded: the incident stays pending and the daemon retries it.
+            raise ModelUnavailableError(f"model unavailable for {incident_id}")
         record = VerdictRecord(
             verdict=triage.verdict,
             model=triage.model,

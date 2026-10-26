@@ -152,3 +152,37 @@ async def test_audit_trail(lapi_mock: respx.MockRouter, make_app: Any) -> None:
     assert [e["kind"] for e in trail] == ["verdict", "decision"]
     assert trail[0]["actor"] == "model" and trail[1]["actor"] == "policy"
     assert trail[0]["detail"]["prompt_version"] == "triage-v1"
+
+
+async def test_model_outage_requeues_instead_of_unknown(
+    lapi_mock: respx.MockRouter, make_app: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An Ollama outage must not turn queued incidents into unknown verdicts."""
+    from nazar import daemon as daemon_mod
+    from nazar.core.errors import LlmError
+
+    monkeypatch.setattr(daemon_mod, "MODEL_RETRY_BASE_S", 0.0)
+    backend = FakeBackend(LlmError("down"), LlmError("down"), VALID, VALID)
+    app = make_app(backend)
+    results = await Daemon(app).run_once()
+    assert len(results) == 2
+    assert all(r.verdict.verdict is VerdictLabel.MALICIOUS for r in results)
+    # no placeholder verdicts were stored for the failed attempts
+    for r in results:
+        rows = app.store.verdicts.for_incident(r.incident.incident_id)
+        assert [v.record.verdict.verdict for v in rows] == [VerdictLabel.MALICIOUS]
+
+
+async def test_model_outage_gives_up_after_max_retries(
+    lapi_mock: respx.MockRouter, make_app: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from nazar import daemon as daemon_mod
+    from nazar.core.errors import LlmError
+
+    monkeypatch.setattr(daemon_mod, "MODEL_RETRY_BASE_S", 0.0)
+    attempts = (daemon_mod.MAX_MODEL_RETRIES + 1) * 2
+    app = make_app(FakeBackend(*[LlmError("down")] * attempts))
+    results = await Daemon(app).run_once()
+    assert len(results) == 2
+    assert all(r.verdict.verdict is VerdictLabel.UNKNOWN for r in results)
+    assert all(not r.valid_output for r in results)

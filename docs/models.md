@@ -39,6 +39,20 @@ Larger security models (Cisco Foundation-Sec-8B, Seneca 8B, Dolphin3-Cyber 8B) n
 and were not tested yet. On a host with 8 GB RAM, Foundation-Sec-8B-Instruct, Qwen3-4B-Instruct-2507
 (`qwen3:4b-instruct`), Phi-4-mini and Gemma 3 4B are the next candidates (TRACKER V-3).
 
+## Memory
+
+Measured with `granite4:micro-h` on a CPU-only host (Ollama 0.40.11):
+
+- **Disable llama.cpp's prompt cache.** Recent Ollama versions run llama.cpp's server, which
+  saves every finished prompt's state in RAM (limit 8 GiB by default). Nazar's prompts are all
+  different, so memory grew with each incident (2.44 → 2.94 GB) until the process was killed.
+  Set `LLAMA_ARG_CACHE_RAM=0` for the Ollama service; [deploy/ollama-nazar.conf](../deploy/ollama-nazar.conf)
+  is a ready systemd drop-in. With it, the 3B model stays at about 2.45 GB.
+- **Budget ~2.5 GB for the 3B model.** On CPU, Ollama loads and repacks the weights into its own
+  memory (1.4 GB repacked + 0.4 GB), so `num_ctx` hardly changes the total.
+- **If Ollama is restarted or killed**, Nazar keeps the affected incidents queued and retries
+  them with backoff instead of recording `unknown`.
+
 ## Lessons for choosing a model
 
 - **Prefer non-reasoning models.** Ollama's `num_predict` budget covers reasoning *and* answer, and

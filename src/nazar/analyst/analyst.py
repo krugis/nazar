@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from dataclasses import dataclass
 
 from nazar.analyst.backend import LlmBackend
@@ -25,6 +26,8 @@ class TriageResult:
     model: str
     prompt_version: str
     error: str | None = None
+    model_unavailable: bool = False
+    """The backend was unreachable: the verdict is a placeholder, retry later."""
 
 
 class Analyst:
@@ -77,7 +80,8 @@ class Analyst:
         except LlmError as exc:
             log.warning("model_unavailable", incident_id=incident.incident_id, error=str(exc))
             fallback = Verdict.unknown("model unavailable; no action taken")
-            return self._result(fallback, False, 1, None, "model unavailable")
+            result = self._result(fallback, False, 1, None, "model unavailable")
+            return dataclasses.replace(result, model_unavailable=True)
 
     @property
     def output_unhealthy(self) -> bool:

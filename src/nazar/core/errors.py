@@ -33,6 +33,10 @@ class LlmError(UpstreamError):
     pass
 
 
+class ModelUnavailableError(LlmError):
+    """The model backend could not be reached; the incident should be retried later."""
+
+
 class CtiError(UpstreamError):
     pass
 

@@ -12,7 +12,7 @@ from zoneinfo import ZoneInfo
 from nazar import __version__
 from nazar.app import App
 from nazar.core.clock import to_iso
-from nazar.core.errors import LapiError, NotifierError
+from nazar.core.errors import LapiError, ModelUnavailableError, NotifierError
 from nazar.core.log import get_logger
 from nazar.notify import TextNote, build_summary, render_summary
 from nazar.pipeline import PipelineResult, report_line
@@ -22,6 +22,8 @@ from nazar.store import IncidentRow
 log = get_logger(__name__)
 
 MAX_PIPELINE_FAILURES = 3
+MAX_MODEL_RETRIES = 5
+MODEL_RETRY_BASE_S = 10.0
 HOUSEKEEPING_SECONDS = 60
 RETENTION_EVERY = timedelta(hours=24)
 HEALTH_KEY = "health"
@@ -126,8 +128,24 @@ class Daemon:
         """Run the pipeline for one incident; failures are contained and counted."""
         app = self.app
         key = f"pipeline.failures.{incident_id}"
+        retry_key = f"pipeline.model_retries.{incident_id}"
+        retries = int(app.store.kv.get(retry_key, 0))
         try:
-            result = await app.pipeline.process(incident_id)
+            result = await app.pipeline.process(
+                incident_id, retry_exhausted=retries >= MAX_MODEL_RETRIES
+            )
+        except ModelUnavailableError:
+            # Keep the incident pending, put it back in the queue and back off, so one Ollama
+            # outage does not turn the whole queue into "unknown" verdicts.
+            app.store.kv.set(retry_key, retries + 1)
+            row = app.store.incidents.get(incident_id)
+            if row is not None:
+                self._enqueue(row)
+            delay = min(MODEL_RETRY_BASE_S * 2**retries, 300.0)
+            log.warning("model_unavailable_retry_later", incident_id=incident_id,
+                        attempt=retries + 1, retry_in=delay)  # fmt: skip
+            await self._sleep(delay)
+            return None
         except Exception:
             failures = int(app.store.kv.get(key, 0)) + 1
             app.store.kv.set(key, failures)
@@ -135,6 +153,8 @@ class Daemon:
             if failures >= MAX_PIPELINE_FAILURES:
                 app.pipeline.record_skipped([incident_id], "pipeline_failed")
             return None
+        if retries:
+            app.store.kv.set(retry_key, 0)
         if result is not None and result.decision is not None and result.decision.unusual_volume:
             await app.health.update(
                 "volume", "warning", "automatic action budget reached; actions need approval"

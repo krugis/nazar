@@ -28,6 +28,16 @@ curl -fsSL https://ollama.com/install.sh | sh
 ollama pull granite4:micro-h
 ```
 
+Recommended Ollama setting (prevents memory growth with recent Ollama versions):
+
+```bash
+sudo mkdir -p /etc/systemd/system/ollama.service.d
+```
+
+```bash
+sudo cp deploy/ollama-nazar.conf /etc/systemd/system/ollama.service.d/nazar.conf && sudo systemctl daemon-reload && sudo systemctl restart ollama
+```
+
 ## 3. Install Nazar
 
 From a checkout of this repository:

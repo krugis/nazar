@@ -76,6 +76,13 @@ cannot be tight without breaking CTI/Telegram. Documented option: when neither i
 The cscli fallback needs access to the CrowdSec DB/socket and is therefore off by default; enabling
 it requires relaxing the unit (documented, not default).
 
+## `deploy/ollama-nazar.conf`
+
+Optional systemd drop-in for Ollama: `LLAMA_ARG_CACHE_RAM=0` (llama.cpp's host prompt cache otherwise
+grows memory with every distinct prompt, found live with Ollama 0.40.11), one loaded model, one
+request at a time, and a commented `MemoryMax` for shared hosts. `install.sh` does not install it,
+because it changes another service's configuration; the install guide shows the two commands.
+
 ## `deploy/install.sh`
 
 POSIX `sh`, idempotent, `set -eu`, run as root:

@@ -36,6 +36,12 @@ Any exception inside `process` is caught at the task boundary, logged with the i
 incident keeps `needs_triage = 1` with a retry counter (`kv`), dropped to a `unknown` verdict after
 3 failures. CrowdSec is never touched on an error path.
 
+**Model outages** are handled separately: when the backend is unreachable, the pipeline records
+nothing and raises `ModelUnavailableError`; the daemon puts the incident back in the queue and
+backs off (10 s doubling, max 5 min). After 5 attempts for one incident the `unknown` fallback is
+recorded, so a dead backend cannot block the queue forever. Found live: before this, each Ollama
+restart turned the next 4–5 queued incidents into `unknown`.
+
 ## Daemon tasks (`nazar.daemon.Daemon.run()`)
 
 One asyncio event loop. Each task runs under a supervisor: an unexpected exception restarts that
