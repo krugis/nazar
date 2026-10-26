@@ -37,7 +37,7 @@ async def _run(cfg: Any, args: argparse.Namespace) -> int:
     app = build_app(cfg)
     try:
         # Dry-run prints one report line per incident as it is triaged (not with --json).
-        daemon = Daemon(app, reporter=None if args.json else print)
+        daemon = Daemon(app, reporter=None if args.json else _report_line)
         if not args.once:
             await daemon.run()
             return 0
@@ -56,6 +56,11 @@ async def _run(cfg: Any, args: argparse.Namespace) -> int:
         return 0
     finally:
         await app.aclose()
+
+
+def _report_line(line: str) -> None:
+    # Flush: under systemd stdout is a pipe, and buffered report lines would only appear much later.
+    print(line, flush=True)
 
 
 def _result_json(r: PipelineResult) -> dict[str, Any]:
