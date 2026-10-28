@@ -41,6 +41,10 @@ def build_summary(store: Store, since: datetime, now: datetime) -> dict[str, Any
         "outcomes": dict(Counter(d.decision.outcome.value for d in decisions)),
         "intended_outcomes": dict(Counter(d.decision.intended_outcome.value for d in decisions)),
         "applied": sum(d.applied_at is not None for d in decisions),
+        # bans Nazar skipped because CrowdSec's own decision already blocks the IP (policy R5)
+        "already_banned": sum(
+            any(r.startswith("R5 ") for r in d.decision.reasons) for d in decisions
+        ),
         "rolled_back": sum(d.rolled_back_at is not None for d in decisions),
         "approvals": dict(Counter(a.status.value for a in approvals)),
         "invalid_output_pct": round(100.0 * invalid / len(model_verdicts), 1)
@@ -70,8 +74,12 @@ def render_summary(s: dict[str, Any]) -> str:
         f"Incidents: {s['incidents']} ({s['model_triaged']} triaged by the model)",
         f"Verdicts: {_counts(s['verdicts'])}",
         f"Outcomes: {_counts(s['outcomes'])}",
-        f"Would be (active mode): {_counts(s['intended_outcomes'])}",
-        f"Bans applied: {s['applied']}, rolled back: {s['rolled_back']}",
+    ]
+    if s["intended_outcomes"] != s["outcomes"]:  # differs only in dry-run mode
+        lines.append(f"Would be (active mode): {_counts(s['intended_outcomes'])}")
+    lines += [
+        f"Bans applied by Nazar: {s['applied']}, rolled back: {s['rolled_back']}",
+        f"Already banned by CrowdSec (Nazar did not add a ban): {s.get('already_banned', 0)}",
         f"Approvals: {_counts(s['approvals'])}",
         f"Model invalid output: {s['invalid_output_pct']}%"
         + (

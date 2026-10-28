@@ -89,10 +89,11 @@ edited to say so.
 ## Daily summary
 
 At `daily_summary_time` in `timezone` (the daemon checks once a minute, `kv["summary.last_sent"]`
-prevents doubles): incidents, verdict counts, decisions by outcome, applied/rolled back, approvals
-pending/expired, top 5 incidents by severity, model invalid-output rate (bad answers) and,
-separately, incidents not triaged because the model was unavailable, health events. Same text as
-`nazar report --daily`.
+prevents doubles): incidents, verdict counts, decisions by outcome ("would be" outcomes only when
+they differ, i.e. dry-run), bans applied by Nazar / rolled back, bans skipped because CrowdSec
+already blocks the IP (R5), approvals pending/expired, top 5 incidents by severity, model
+invalid-output rate (bad answers) and, separately, incidents not triaged because the model was
+unavailable, health events. Same text as `nazar report --daily`.
 
 ## Tests
 

@@ -44,6 +44,13 @@ def test_summary_counts(store: Store, clock: FrozenClock) -> None:
         action=Action.BAN, outcome=Outcome.AUTO, intended_outcome=Outcome.AUTO, duration="4h"
     )
     store.decisions.mark_applied(store.decisions.add(inc.id, vid, d), "1")
+    skipped = Decision(
+        action=Action.BAN,
+        outcome=Outcome.REPORT_ONLY,
+        intended_outcome=Outcome.REPORT_ONLY,
+        reasons=["R5 CrowdSec already bans this IP"],
+    )
+    store.decisions.add(inc.id, vid, skipped)
     other = store.incidents.create("192.0.2.1", clock.now())
     store.verdicts.add(
         other.id,
@@ -51,10 +58,13 @@ def test_summary_counts(store: Store, clock: FrozenClock) -> None:
     )
     s = build_summary(store, clock.now() - timedelta(hours=24), clock.now())
     assert s["incidents"] == 2 and s["model_triaged"] == 4
-    assert s["applied"] == 1 and s["outcomes"] == {"auto": 1}
+    assert s["applied"] == 1 and s["outcomes"] == {"auto": 1, "report_only": 1}
+    assert s["already_banned"] == 1
     assert s["invalid_output_pct"] == 25.0  # 1 of 4 model verdicts
     assert s["model_unavailable"] == 2
     assert s["skipped"] == {"allowlisted:config": 1}
     text = render_summary(s)
-    assert "Bans applied: 1" in text and "Incidents: 2" in text
+    assert "Bans applied by Nazar: 1" in text and "Incidents: 2" in text
+    assert "Already banned by CrowdSec (Nazar did not add a ban): 1" in text
+    assert "Would be (active mode)" not in text  # same as the outcomes outside dry-run
     assert "plus 2 not triaged: model unavailable" in text
